@@ -1,0 +1,6 @@
+
+ git status  # shows new changes
+git add .  # adds all changes to be commited
+git status  # to confirm all files were commited
+git commit  -m "COMMENT"  # commits with comment
+git push -u origin main  # pushes commits to online repo
