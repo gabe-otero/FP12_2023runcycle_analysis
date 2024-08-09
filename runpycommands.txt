@@ -1,6 +1,7 @@
 cd F:\LANL\analysis
 
 For ($i=11139; $i -le 11143; $i++) {python SF_test.py 11139 11412 $i}
+For ($i=12034; $i -le 12363; $i++) {python asym_test_D5_not0.py 12034 12363 $i}
 
 emessage = (nice)
 logger.error(run_num + emessage)

@@ -40,11 +40,11 @@ uniquefolder = "runs" + str(run_start) + "-" + str(run_end) +"/"
 SFNormFile = 'SF_Norm_files/'+uniquefolder+run_num
 
 statefileloc = 'F:\LANL\SF_Norm_files\TR_R_expected_avgs_stds_afterclip.csv'
-processedpulsefolder = '/processed_data/'+uniquefolder+'pulses_added_U/'
-processedasymfolder = '/processed_data/'+uniquefolder+'asym_U/'
-AddedPulseSavename = processedpulsefolder+run_num+'_pulsesadded_U'
-AsymSavename = processedasymfolder+run_num+'_asym_U'
-logger.add("F:/LANL/processed_data/" + uniquefolder + '0_ErrorLog_'+run_start+'_'+run_end+'_U.txt', delay = False)
+processedpulsefolder = '/processed_data/'+uniquefolder+'pulses_added_D/'
+processedasymfolder = '/processed_data/'+uniquefolder+'asym_D/'
+AddedPulseSavename = processedpulsefolder+run_num+'_pulsesadded_D'
+AsymSavename = processedasymfolder+run_num+'_asym_D'
+logger.add("F:/LANL/processed_data/" + uniquefolder + '0_ErrorLog_'+run_start+'_'+run_end+'_D.txt', delay = False)
 
 print('processing data: ' + uniquefolder + '/run' + run_num)
 
@@ -66,8 +66,8 @@ fullstart = time.time()
 
 ## cannot handle all 24 detectors at once, memory issue... can look into np.empty and deleting variables if needed
 #chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]) ## all
-#chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,24]) ## downstream
-chan_enab = np.array([12,13,14,15,16,17,18,19,20,21,22,23,24]) ## upstream
+chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,24]) ## downstream
+# chan_enab = np.array([12,13,14,15,16,17,18,19,20,21,22,23,24]) ## upstream
 
 #@jit(nopython = True)
 # read_data = np.array([])
