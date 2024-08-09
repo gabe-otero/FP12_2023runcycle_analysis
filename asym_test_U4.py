@@ -11,6 +11,7 @@ import time
 from numba.core.errors import NumbaDeprecationWarning, NumbaPendingDeprecationWarning
 import warnings
 from loguru import logger
+from datetime import datetime
 
 warnings.simplefilter('ignore', category=NumbaDeprecationWarning)
 warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
@@ -591,6 +592,7 @@ np.save(os.getcwd() + AsymSavename, Asym)
 
 fullend = time.time()
 print('full processing time: ' + str(fullend-fullstart))  
+print('finished ' + str(datetime.now())) 
 print('\n')
 
 # ## end of data processing ##

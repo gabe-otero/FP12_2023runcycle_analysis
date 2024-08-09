@@ -40,11 +40,11 @@ uniquefolder = "runs" + str(run_start) + "-" + str(run_end) +"/"
 SFNormFile = 'SF_Norm_files/'+uniquefolder+run_num
 
 statefileloc = 'F:\LANL\SF_Norm_files\TR_R_expected_avgs_stds_afterclip.csv'
-processedpulsefolder = '/processed_data/'+uniquefolder+'pulses_added_D/'
-processedasymfolder = '/processed_data/'+uniquefolder+'asym_D/'
-AddedPulseSavename = processedpulsefolder+run_num+'_pulsesadded_D'
-AsymSavename = processedasymfolder+run_num+'_asym_D'
-logger.add("F:/LANL/processed_data/" + uniquefolder + '0_ErrorLog_'+run_start+'_'+run_end+'_D.txt', delay = False)
+processedpulsefolder = '/processed_data/'+uniquefolder+'pulses_added_U/'
+processedasymfolder = '/processed_data/'+uniquefolder+'asym_U/'
+AddedPulseSavename = processedpulsefolder+run_num+'_pulsesadded_U'
+AsymSavename = processedasymfolder+run_num+'_asym_U'
+logger.add("F:/LANL/processed_data/" + uniquefolder + '0_ErrorLog_'+run_start+'_'+run_end+'_U.txt', delay = False)
 
 print('processing data: ' + uniquefolder + '/run' + run_num)
 
@@ -66,8 +66,8 @@ fullstart = time.time()
 
 ## cannot handle all 24 detectors at once, memory issue... can look into np.empty and deleting variables if needed
 #chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]) ## all
-chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,24]) ## downstream
-# chan_enab = np.array([12,13,14,15,16,17,18,19,20,21,22,23,24]) ## upstream
+#chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,24]) ## downstream
+chan_enab = np.array([12,13,14,15,16,17,18,19,20,21,22,23,24]) ## upstream
 
 #@jit(nopython = True)
 # read_data = np.array([])
@@ -452,13 +452,15 @@ if abs(max(offset[-1], key = abs)) > extendedRange: ## if the max offset of 6Li 
 
 # ys_ext = np.zeros((len(ys_basesub), len(ys_basesub[0]), len(ys_basesub[0][0])+extendedRange*2), dtype=np.float64)
 # ys_cut = np.zeros((len(ys_basesub), len(ys_basesub[0]), (len(ys_ext[0][0])-((extendedRange*2)+1)*2)))
-try:
-    ys_ext = np.empty((len(ys_basesub), len(ys_basesub[0]), len(ys_basesub[0][0])+extendedRange*2), dtype=np.float64)
-    ys_cut = np.empty((len(ys_basesub), len(ys_basesub[0]), (len(ys_ext[0][0])-((extendedRange*2)+1)*2)))
-    xs_cut = np.zeros((len(ys_cut), len(ys_cut[0][0])))
-except Exception as e:
-    logger.error(run_num + ' failed during ys_cut array creation')
-    logger.exception(e)
+
+## Below commented out for testing without t0 aligning 08.08.24
+# try:
+#     ys_ext = np.empty((len(ys_basesub), len(ys_basesub[0]), len(ys_basesub[0][0])+extendedRange*2), dtype=np.float64)
+#     ys_cut = np.empty((len(ys_basesub), len(ys_basesub[0]), (len(ys_ext[0][0])-((extendedRange*2)+1)*2)))
+#     xs_cut = np.zeros((len(ys_cut), len(ys_cut[0][0])))
+# except Exception as e:
+#     logger.error(run_num + ' failed during ys_cut array creation')
+#     logger.exception(e)
 
 # cant use jit because np.pad is not supported
 def align_cut_norm(ys, xs_arr, extendedr):
@@ -474,12 +476,13 @@ def align_cut_norm(ys, xs_arr, extendedr):
     tempxs_cut = xs_arr[x_cut_amt:-x_cut_amt].copy()
     return tempys_cut, tempxs_cut
 
-try:
-    for i in range(len(ys_basesub)):
-        ys_cut[i], xs_cut[i] = align_cut_norm(ys_basesub[i], xs[i], extendedRange)
-except Exception as e:
-    logger.error(run_num + ' failed aligning and cutting')
-    logger.exception(e)
+## Below commented out for testing without t0 aligning 08.08.24
+# try:
+#     for i in range(len(ys_basesub)):
+#         ys_cut[i], xs_cut[i] = align_cut_norm(ys_basesub[i], xs[i], extendedRange)
+# except Exception as e:
+#     logger.error(run_num + ' failed aligning and cutting')
+#     logger.exception(e)
     
 # checkp = 2053
 # print(offset[-1][checkp]) ## checking offset for one example checkpulse
@@ -487,8 +490,8 @@ except Exception as e:
 # #print('extended range index for checkpulse: '+str(np.argmax(ys_ext[0][checkp]> 2000)))
 # print('cut array index for checkpulse: '+str(np.argmax((ys_cut[0][checkp]*HeNorms[checkp])> 2000)))
 
-del ys_ext ## might help with memory issues
-del ys_basesub
+# del ys_ext ## might help with memory issues
+# del ys_basesub
 
 end = time.time()
 print('aligning and cutting time: ' + str(end-start))            
@@ -537,8 +540,8 @@ def add_pulse(ys, SFarr):
                     temp_ONOFF[seq][1] = np.add(temp_ONOFF[seq][1],ys[p]) ## start with zeros, add to each iteratively
     return temp_ONOFF
 
-for i in range(len(ys_cut)):
-    ON_OFF_sums[i] = add_pulse(ys_cut[i], sequence)
+for i in range(len(ys_basesub)):
+    ON_OFF_sums[i] = add_pulse(ys_basesub[i], sequence)
                 
 ## plotting examples
 # plt.plot(xs_cut[i], added_pulses[0][0][0] , label=legend[0] +', sequence 1 state 1, 40 pulses added')
@@ -589,9 +592,10 @@ end = time.time()
 
 # np.save(os.getcwd() + AddedPulseSavename, added_pulses)
 np.save(os.getcwd() + AsymSavename, Asym)
+np.save(os.getcwd() + 'xs_uncut', xs)
 
 fullend = time.time()
-print('full processing time: ' + str(fullend-fullstart)) 
+print('full processing time: ' + str(fullend-fullstart))  
 print('finished ' + str(datetime.now())) 
 print('\n')
 
