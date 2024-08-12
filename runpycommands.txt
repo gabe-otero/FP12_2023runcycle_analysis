@@ -6,3 +6,5 @@ For ($i=12034; $i -le 12363; $i++) {python asym_test_D5_not0.py 12034 12363 $i}
 emessage = (nice)
 logger.error(run_num + emessage)
 raise Exception(emessage)
+
+p2j myscript.py

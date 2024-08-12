@@ -44,7 +44,14 @@ processedpulsefolder = '/processed_data/'+uniquefolder+'pulses_added_D/'
 processedasymfolder = '/processed_data/'+uniquefolder+'asym_D/'
 AddedPulseSavename = processedpulsefolder+run_num+'_pulsesadded_D'
 AsymSavename = processedasymfolder+run_num+'_asym_D'
+ONSavename = processedasymfolder+run_num+'_ON_D'
+OFFSavename = processedasymfolder+run_num+'_OFF_D'
 logger.add("F:/LANL/processed_data/" + uniquefolder + '0_ErrorLog_'+run_start+'_'+run_end+'_D.txt', delay = False)
+
+## cannot handle all 24 detectors at once, memory issue... can look into np.empty and deleting variables if needed
+#chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]) ## all
+chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,24]) ## downstream
+# chan_enab = np.array([12,13,14,15,16,17,18,19,20,21,22,23,24]) ## upstream
 
 print('processing data: ' + uniquefolder + '/run' + run_num)
 
@@ -63,11 +70,6 @@ else:
 
 start = time.time()
 fullstart = time.time()
-
-## cannot handle all 24 detectors at once, memory issue... can look into np.empty and deleting variables if needed
-#chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]) ## all
-chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,24]) ## downstream
-# chan_enab = np.array([12,13,14,15,16,17,18,19,20,21,22,23,24]) ## upstream
 
 #@jit(nopython = True)
 # read_data = np.array([])
@@ -98,7 +100,7 @@ if chan_enab[-1] != 24:
 end = time.time()
 # print('file open time: ' + str(end-start))            
 
-print('saving processed data to ' + AsymSavename)
+# print('saving processed data to ' + AsymSavename)
 print("Channel is " + str(chan_enab))
 end = time.time()
 # print(end-start)
@@ -510,12 +512,14 @@ legend = ['NaI5 (downstream)','NaI4R (upstream)','6Li']
 ## i channels, 13 sequences each, 8 states each sequence, 8992 num points
 
 # ON_OFF_sums = np.zeros((len(ys_cut), len(sequence[0]), 2, len(ys_cut[0][0])), dtype=np.float64) ## 13 sequences, 2 for ON or OFF for each sequence
-ON_OFF_sums = np.zeros((len(ys_basesub), len(sequence[0]), 2, len(ys_basesub[0][0])), dtype=np.float64) ## 13 sequences, 2 for ON or OFF for each sequence
+ON_sums = np.zeros((len(ys_basesub), len(sequence[0]), len(ys_basesub[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for ON
+OFF_sums = np.zeros((len(ys_basesub), len(sequence[0]), len(ys_basesub[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for OFF
 
 # @njit
 def add_pulse(ys, SFarr):
 #     tempadded_p = np.zeros((len(SFarr[0]), 8, len(ys[0])), dtype=np.float64)    
-    temp_ONOFF = np.zeros((len(SFarr[0]), 2, len(ys[0])), dtype=np.float64)
+    temp_ON = np.zeros((len(SFarr[0]), len(ys[0])), dtype=np.float64)
+    temp_OFF = np.zeros((len(SFarr[0]), len(ys[0])), dtype=np.float64)
     for seq in range(0, len(SFarr[0])): ## for every sequence
 #         print('seq:' +str(SFarr[0][seq]))
         for state in range(0, len(SFarr[1][0])): ## for every state in the sequence
@@ -530,7 +534,7 @@ def add_pulse(ys, SFarr):
 #                 tempadded_pulses[i] = added_pulses[i]+np.array(ys_cut[i][j])
 #                 tempadded_p[seq][state] = np.add(tempadded_p[seq][state],(ys[p])) ## start with zeros, add to each iteratively
 #                 print('ON sum: ' + str(temp_ONOFF[seq][0]))
-                    temp_ONOFF[seq][0] = np.add(temp_ONOFF[seq][0],ys[p]) ## start with zeros, add to each iteratively
+                    temp_ON[seq] = np.add(temp_ON[seq],ys[p]) ## start with zeros, add to each iteratively
 #                 print('ON state: ' + str(s))
             if s==0 or s==1 or s==3 or s==6: ## these are OFF states
 #                 print('OFF state: ' + str(s))
@@ -538,11 +542,14 @@ def add_pulse(ys, SFarr):
 #                 tempadded_pulses[i] = added_pulses[i]+np.array(ys_cut[i][j])
 #                 tempadded_p[seq][state] = np.add(tempadded_p[seq][state],(ys[p])) ## start with zeros, add to each iteratively
 #                 print('ON sum: ' + str(temp_ONOFF[seq][0]))
-                    temp_ONOFF[seq][1] = np.add(temp_ONOFF[seq][1],ys[p]) ## start with zeros, add to each iteratively
-    return temp_ONOFF
+                    temp_OFF[seq] = np.add(temp_OFF[seq],ys[p]) ## start with zeros, add to each iteratively
+    return temp_ON, temp_OFF
 
 for i in range(len(ys_basesub)):
-    ON_OFF_sums[i] = add_pulse(ys_basesub[i], sequence)
+    ON_sums[i], OFF_sums[i] = add_pulse(ys_basesub[i], sequence)
+
+np.save(os.getcwd() + ONSavename, ON_sums)
+np.save(os.getcwd() + OFFSavename, OFF_sums)
                 
 ## plotting examples
 # plt.plot(xs_cut[i], added_pulses[0][0][0] , label=legend[0] +', sequence 1 state 1, 40 pulses added')
@@ -572,28 +579,52 @@ for i in range(len(ys_basesub)):
 
 start = time.time()
 
-Asym = np.zeros((len(ON_OFF_sums), len(ON_OFF_sums[0][0][0])), dtype=np.float64) ## 1 Asym for each channel, not for each sequence (can change)
+#### OLD ASYM ####
+
+## take off asym for now 08.09.24
+# Asym = np.zeros((len(ON_OFF_sums), len(ON_OFF_sums[0][0][0])), dtype=np.float64) ## 1 Asym for each channel, not for each sequence (can change)
 
 def asym(ON_OFF_arr):
     tempasym = np.zeros((len(ON_OFF_arr[0][0])), dtype=np.float64)
     for seq in range(len(ON_OFF_arr[0])): ## number of sequences
         asymform = ((ON_OFF_arr[seq][0]-ON_OFF_arr[seq][1]) / (ON_OFF_arr[seq][0]+ON_OFF_arr[seq][1]))
         tempasym = np.add(asymform,tempasym)
-    normedasym = tempasym/len(ON_OFF_sums[0])
+    normedasym = tempasym/len(ON_OFF_arr)
     return normedasym
 
-for i in range(len(ON_OFF_sums)):
-    Asym[i] = asym(ON_OFF_sums[i])
+## take off asym for now 08.09.24
+# for i in range(len(ON_OFF_sums)):
+#     Asym[i] = asym(ON_OFF_sums[i])
 
 end = time.time()
 # print('calculate asymmetry time: ' + str(end-start)) 
 
+#### end OLD ####
+#### NEW ####
+
+asym_ch = np.zeros((len(ON_sums), len(ON_sums[0][0])), dtype=np.float64) ## 1 Asym for each channel, not for each sequence (can change?)
+
+def asym2(ON_arr, OFF_arr):
+    tempasym = np.zeros((len(ON_arr[0])), dtype=np.float64)
+    for seq in range(0, len(ON_arr)): ## number of sequences
+#         print(seq)
+        seqasym = ((ON_arr[seq]-OFF_arr[seq]) / (ON_arr[seq]+OFF_arr[seq]))
+        tempasym = np.add(seqasym,tempasym)
+    normedasym = tempasym/len(ON_arr)
+    return normedasym
+
+for i in range(len(ON_sums)):
+    asym_ch[i] = asym2(ON_sums[i], OFF_sums[i])
+    # print('ch done')
+
+#### end NEW ####
 
 # In[13]:
 
 # np.save(os.getcwd() + AddedPulseSavename, added_pulses)
-np.save(os.getcwd() + AsymSavename, Asym)
-np.save(os.getcwd() + 'LANL/processed_data/'+ 'xs_uncut', xs)
+# np.save(os.getcwd() + AsymSavename, Asym)
+np.save(os.getcwd() + AsymSavename, asym_ch)
+np.save(os.getcwd() + '/processed_data/'+ 'xs_uncut', xs)
 
 fullend = time.time()
 print('full processing time: ' + str(fullend-fullstart))  
