@@ -506,11 +506,7 @@ print('aligning and cutting time: ' + str(end-start))
 
 start = time.time()
 
-legend = ['NaI5 (downstream)','NaI4R (upstream)','6Li']
 sequence = np.asarray(sequence, dtype = object)
-
-# added_pulses = np.zeros((len(ys_cut), len(sequence[0]), 8, len(ys_cut[0][0])), dtype=np.float64) ## 13 sequences, 8 stages each works?<br>
-# i channels, 13 sequences each, 8 states each sequence, 8992 num points ##
 
 # ON_OFF_sums = np.zeros((len(ys_cut), len(sequence[0]), 2, len(ys_cut[0][0])), dtype=np.float64) ## 13 sequences, 2 for ON or OFF for each sequence
 ON_sums = np.zeros((len(ys_basesub), len(sequence[0]), len(ys_basesub[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for ON
@@ -548,55 +544,26 @@ def add_pulse(ys, SFarr):
                     temp_OFF[seq] = np.add(temp_OFF[seq],ys[p]) ## start with zeros, add to each iteratively
 #         below is for splitting up into ON(-) and ON(+) and their associated OFF states (1 state forward for -, 1 state backward for +)
             if s==0 or s==6: ## these or ON(-) states
+                OFF_i = np.where(np.asarray(SFarr[1][0])==s+1)[0][0] ## find where in sequence state = s(ON-)+1    
 #                 print('ON(-) "s" ' +str(s) + ' from ' + str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))))
-#                 print('actually from '+str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[0]) +
-#                 ' - ' +str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[-1]) + '\n')
                 for p in range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
                     temp_ON_min[seq][0] = np.add(temp_ON_min[seq][0],ys[p]) ## start with zeros, add to each iteratively
-#                 print('associated OFF ' +str(SFarr[1][seq][state+1]))
-                for p in range((SFarr[2][seq][state+1][0]),(SFarr[2][seq][state+1][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
+#                 print('OFF state ' + str(SFarr[1][seq][OFF_i]))
+                for p in range((SFarr[2][seq][OFF_i][0]),(SFarr[2][seq][OFF_i][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
                     temp_ON_min[seq][1] = np.add(temp_ON_min[seq][1],ys[p]) ## start with zeros, add to each iteratively
             if s==3 or s==5: ## these or ON(+) states
+                OFF_i = np.where(np.asarray(SFarr[1][0])==s-1)[0][0] ## find where in sequence state = s(ON+)-1    
 #                 print('ON(+) "s" ' +str(s) + ' from ' + str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))))
-#                 print('actually from '+str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[0]) +
-#                 ' - ' +str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[-1]) + '\n')
                 for p in range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
                     temp_ON_plu[seq][0] = np.add(temp_ON_plu[seq][0],ys[p]) ## start with zeros, add to each iteratively
-#                 print('associated OFF ' +str(SFarr[1][seq][state-1]))
-                for p in range((SFarr[2][seq][state-1][0]),(SFarr[2][seq][state-1][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
+#                 print('OFF state ' + str(SFarr[1][seq][OFF_i]))
+                for p in range((SFarr[2][seq][OFF_i][0]),(SFarr[2][seq][OFF_i][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
                     temp_ON_plu[seq][1] = np.add(temp_ON_plu[seq][1],ys[p]) ## start with zeros, add to each iteratively
     return temp_ON, temp_OFF, temp_ON_min, temp_ON_plu
 
 for i in range(len(ys_basesub)):
 #     print('## channel: ' + str(i) + ' ##')
     ON_sums[i], OFF_sums[i], ON_minus_sums[i], ON_plus_sums[i] = add_pulse(ys_basesub[i], sequence)
-    
-# for i in range(len(ys_basesub)-11):
-#     print('#################### channel: ' + str(i) + ' ##########################')
-#     ON_sums[i], OFF_sums[i] = add_pulse(ys_basesub[i], sequence)
-
-# np.save(os.getcwd() + ONSavename, ON_sums)
-# np.save(os.getcwd() + OFFSavename, OFF_sums)
-                
-# plotting examples ##
-# plt.plot(xs_cut[i], added_pulses[0][0][0] , label=legend[0] +', sequence 1 state 1, 40 pulses added')
-# plt.plot(xs_cut[i], added_pulses[0][0][1] , label=legend[0] +', sequence 1 state 2, 40 pulses added')
-# plt.plot(xs_cut[i], added_pulses[0][1][0] , label=legend[0] +', sequence 2 state 1, 40 pulses added') 
-# plt.plot(xs_cut[i], added_pulses[0][1][1] , label=legend[0] +', sequence 2 state 2, 40 pulses added') 
-    
-# plt.title('Detector signals') 
-# plt.xlabel("time from trigger (ns)")
-# plt.ylabel("ADC")
-
-# plt.axvline(xs[0][baseL], ls = '--')
-# plt.axvline(xs[0][baseR], ls = '--')
-# plt.axvline(xs[1][intgrL], ls = '--', c ='g')
-# plt.axvline(xs[1][intgrR], ls = '--', c ='g')
-# plt.axvline(xs[2][HeintgrL], ls = '--', c ='r')
-# plt.axvline(xs[2][HeintgrR], ls = '--', c ='r')
-
-# plt.legend()
-# plt.show()
 
 end = time.time()
 print('summing pulses into their states time: ' + str(end-start)) 
