@@ -40,18 +40,18 @@ uniquefolder = "runs" + str(run_start) + "-" + str(run_end) +"/"
 SFNormFile = 'SF_Norm_files/'+uniquefolder+run_num
 
 statefileloc = 'F:\LANL\SF_Norm_files\TR_R_expected_avgs_stds_afterclip.csv'
-processedpmfolder = '/processed_data/'+uniquefolder+'plusminus_D/'
-processedasymfolder = '/processed_data/'+uniquefolder+'asym_D/'
-pmSavename = processedpmfolder+run_num+'_pm_D'
-AsymSavename = processedasymfolder+run_num+'_asym_D'
-# ONSavename = processedasymfolder+run_num+'_ON_D'
-# OFFSavename = processedasymfolder+run_num+'_OFF_D'
-logger.add("F:/LANL/processed_data/" + uniquefolder + '0_ErrorLog_'+run_start+'_'+run_end+'_D.txt', delay = False)
+processedpmfolder = '/processed_data/'+uniquefolder+'plusminus_U/'
+processedasymfolder = '/processed_data/'+uniquefolder+'asym_U/'
+pmSavename = processedpmfolder+run_num+'_pm_U'
+AsymSavename = processedasymfolder+run_num+'_asym_U'
+# ONSavename = processedasymfolder+run_num+'_ON_U'
+# OFFSavename = processedasymfolder+run_num+'_OFF_U'
+logger.add("F:/LANL/processed_data/" + uniquefolder + '0_ErrorLog_'+run_start+'_'+run_end+'_U.txt', delay = False)
 
 ## cannot handle all 24 detectors at once, memory issue... can look into np.empty and deleting variables if needed
 #chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]) ## all
-chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,24]) ## downstream
-# chan_enab = np.array([12,13,14,15,16,17,18,19,20,21,22,23,24]) ## upstream
+# chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,24]) ## downstream
+chan_enab = np.array([12,13,14,15,16,17,18,19,20,21,22,23,24]) ## upstream
 
 print('processing data: ' + uniquefolder + '/run' + run_num)
 
@@ -108,9 +108,10 @@ end = time.time()
 
 # Store the big header for each channel in arrays
 
+# In[3]:
+
 
 # In[2]:
-
 
 BoardID = []
 recordLength = []
@@ -208,10 +209,11 @@ for i in range(0,len(chan_enab)):
 #           + "; resolution is " + str(resolution[i]) + "ns")
     xs.append(np.arange(startTime[i],(numSamples[i])*resolution[i]+startTime[i], resolution[i]))
 
-#np.asarray(preTime)
-#np.asarray(startTime)
-#np.asarray(endTime)
-#np.asarray(resolution)
+# np.asarray(preTime)
+# np.asarray(startTime)
+# np.asarray(endTime)
+# np.asarray(resolution)
+
 xs = np.asarray(xs) ## can convert xs to np array here because all detectors same numsamples
 
 # In[16]:
@@ -247,8 +249,8 @@ def dataread(data, channels, fileLen, numSamps):
             eventCount += 1
     return ys_arr, ETTT_arr, eventcount_arr
 
-#start=time.time()
-#ys_arrHe, ETTT_arrHe, eventcount_arrHe  = dataread(read_data, [25], fileLength, numSamples) ##hardcoded channel 25 for He
+# start=time.time()
+# ys_arrHe, ETTT_arrHe, eventcount_arrHe  = dataread(read_data, [25], fileLength, numSamples) ##hardcoded channel 25 for He
 ys_arr, ETTT_arr, eventcount_arr  = dataread(read_data, chan_enab, fileLength, numSamples) ##hardcoded channels for coils
 
 end = time.time()
@@ -265,9 +267,28 @@ for i in range(0,len(chan_enab)):
 #     print("Max time difference for channel", chan_enab[i], "is", max(timeDif[i]), "ns \n")
 #print(timeDif)
 
-# In[18]:
+# In[6]:
 
-## basesub and plotting ##
+# Load in SF and He normalization information ##
+try:
+    df_SF = pd.read_hdf(SFNormFile + '.h5', key='df_0')
+    df_HE = pd.read_hdf(SFNormFile + '.h5', key='df_1')
+except Exception as e:
+    logger.error(run_num + ' failed during SFNormFile load')
+    logger.exception(e)
+
+SF_Sort_arr = df_SF[['nicknames', 'transition_locations']].to_numpy().T
+He_Norm_arr = df_HE[['pulse', 'norms']].to_numpy().T
+
+NormFactor = 1000000  ## He integrals are huge, this normalizes all of those by a constant value for ease of use
+HeNorms= (He_Norm_arr[1])/NormFactor
+
+# print(SF_Sort_arr)
+# print(He_Norm_arr[1]/NormFactor)
+
+# In[18]:
+# basesub and plotting ##
+
 baseL = 0
 baseR = int(((preTime[0]-groupStart[0])*0.70)/chanDec[0])
 numRuns = int((fileLength[0]-20-numSamples[0])/(numSamples[0]+6)+1)
@@ -275,10 +296,11 @@ legend =  ['NaI', 'R']
 
 start = time.time()
 
-s = 20 ## pulse to look at
-t=s+1
+# s = 20 ## pulse to look at
+# t=s+1
 
-## dont know why this is so slow ##
+#  dont know why this is so slow ##
+
 def plotter(ys, xs, baseR, numpoints):
     tempys_basesub = np.zeros((len(ys), numRuns,numpoints[0]), dtype=float)
     for i in range((len(ys))):
@@ -295,46 +317,138 @@ def plotter(ys, xs, baseR, numpoints):
 #             plt.ylabel("ADC")
             plt.legend()
             
-#plotter(ys_arr[9:], xs[9:], baseR, numSamples) ##plot coils
+# plotter(ys_arr[9:], xs[9:], baseR, numSamples) ##plot coils
 
 ys_basesub = np.zeros((len(ys_arr), numRuns,numSamples[0]), dtype=np.float64)
+# ys_basesub_norm = np.zeros((len(ys_arr), numRuns,numSamples[0]), dtype=np.float64)
+
+# @njit ## jit is faster for large # channels, slower for small # channels
+# def basesub(ys, baseRight, numpoints): 
+#     tempys_basesub = np.zeros((numRuns,numpoints[0]), dtype=np.float64)
+#     for pulse in range((len(eventcount_arr[0]))): ## all have 5000 pulses
+#         tempys_basesub[pulse]=np.subtract(ys[pulse], np.mean(ys[pulse][baseL:baseRight]))
+#     return tempys_basesub
 
 @njit ## jit is faster for large # channels, slower for small # channels
-def basesub(ys, baseRight, numpoints): 
+def basesub_norm(ys, baseRight, numpoints): 
     tempys_basesub = np.zeros((numRuns,numpoints[0]), dtype=np.float64)
     for pulse in range((len(eventcount_arr[0]))): ## all have 5000 pulses
         tempys_basesub[pulse]=np.subtract(ys[pulse], np.mean(ys[pulse][baseL:baseRight]))
+        tempys_basesub[pulse]=tempys_basesub[pulse]/HeNorms[pulse] 
     return tempys_basesub
 
-## got rid of sums here, should be done after aligning and cutting
-## got rid of xs in basesub, don't think we need them as an input 06.10.24
+#  got rid of sums here, should be done after aligning and cutting
+#  got rid of xs in basesub, don't think we need them as an input 06.10.24
 
+# for i in range(len(ys_basesub)): ## feeding y arrays into function 1 channel at  a time is faster than all at once
+#     ys_basesub[i] = basesub(ys_arr[i], baseR, numSamples)
 for i in range(len(ys_basesub)): ## feeding y arrays into function 1 channel at  a time is faster than all at once
-    ys_basesub[i] = basesub(ys_arr[i], baseR, numSamples)
+    ys_basesub[i] = basesub_norm(ys_arr[i], baseR, numSamples)
 
 ys_basesub[-1] = ys_basesub[-1]*-1 ## invert 6Li to positive signal. Comment out if not using
+# ys_basesub_norm[-1] = ys_basesub_norm[-1]*-1 ## invert 6Li to positive signal. Comment out if not using
 
 end = time.time()
-# print('plotting and/or base subtraction time: ' + str(end-start))            
+print('plotting and/or base subtraction time: ' + str(end-start))            
 
-# In[6]:
+# In[10]:
 
-## Load in SF and He normalization information 
-try:
-    df_SF = pd.read_hdf(SFNormFile + '.h5', key='df_0')
-    df_HE = pd.read_hdf(SFNormFile + '.h5', key='df_1')
-except Exception as e:
-    logger.error(run_num + ' failed during SFNormFile load')
-    logger.exception(e)
+# use 6Li t0 for all instead of for themselves individually ##
 
-SF_Sort_arr = df_SF[['nicknames', 'transition_locations']].to_numpy().T
-He_Norm_arr = df_HE[['pulse', 'norms']].to_numpy().T
+start = time.time()
 
-NormFactor = 100000  ## He integrals are huge, this normalizes all of those by a constant value for ease of use
-HeNorms= (He_Norm_arr[1])/NormFactor
+NaIthresh=2000
+Li6thresh=1000
 
-# print(df_SF)
+threshold_array = (np.full(len(ys_basesub), NaIthresh))
+threshold_array[-1] = Li6thresh
 
+# njit ## numba does not support reversed, but this could be changed if it's slow
+def find_offset(ys, thresharr):
+    xCrosses = np.zeros((len(ys), numRuns)) #outer array is crossing arrays for given channel, inner array is crossing for each event
+    offset = np.zeros((len(ys), numRuns), dtype=np.int32) ##offset in bins for each channel, each pulse
+    modeCrosses = np.zeros((len(ys)), dtype=np.float64)
+    for i in reversed(range(len(ys))):
+        #xValues.append([])
+        for p in range(len(ys[i])):
+            xing = np.argmax(ys[i][p] > thresharr[i])
+            #print(xing)
+            xCrosses[i][p] = xing
+        modeCrosses[i] = (st.mode(xCrosses[i])) #find the most typical crossing value for each channel
+        for p in range(len(xCrosses[i])):
+            offset[i][p] = (modeCrosses[-1] - xCrosses[i][p]) ## make sure this is the correct sign!!! 
+    if (np.all(xCrosses[-1])) == False:
+        emessage = ('ERROR: 6Li threshold was not reached for at least one pulse')
+        logger.error(run_num + emessage)
+        raise Exception(emessage)
+    return offset, xCrosses, modeCrosses
+                           
+# offset, xCrosses, modeCrosses = find_offset(ys_basesub, threshold_array)
+
+end = time.time()
+# print('finding offset time: ' + str(end-start))  
+
+# In[11]:
+
+#  this cell loops through every channel as opposed to inputting all channels at once. 5x faster ##
+
+start = time.time()
+
+# extend all arrays by a value, check that the max number of offset on 6Li is less than that value ##
+
+# extendedRange = 3 ## must be a positive value which to extend ys_arr
+# if abs(max(offset[-1], key = abs)) > extendedRange: ## if the max offset of 6Li is >extendedRange, something is wrong
+#     emessage = ('ERROR: largest offset greater than extended range')
+#     logger.error(run_num + emessage)
+#     raise Exception(emessage)
+
+# ys_ext = np.zeros((len(ys_basesub), len(ys_basesub[0]), len(ys_basesub[0][0])+extendedRange*2), dtype=np.float64)
+# ys_cut = np.zeros((len(ys_basesub), len(ys_basesub[0]), (len(ys_ext[0][0])-((extendedRange*2)+1)*2)))
+
+# Below commented out for testing without t0 aligning 08.08.24 ##
+# try:
+#     ys_ext = np.zeros((len(ys_basesub), len(ys_basesub[0]), len(ys_basesub[0][0])+extendedRange*2), dtype=np.float64)
+#     ys_cut = np.zeros((len(ys_basesub), len(ys_basesub[0]), (len(ys_ext[0][0])-((extendedRange*2)+1)*2)))
+#     xs_cut = np.zeros((len(ys_cut), len(ys_cut[0][0])))
+# except Exception as e:<br>
+#     logger.error(run_num + ' failed during ys_cut array creation')
+#     logger.exception(e)
+
+# cant use jit because np.pad is not supported ##
+
+def align_cut(ys, xs_arr, extendedr):
+    tempys_ext = np.zeros((len(ys), len(ys[0])+extendedr*2), dtype=np.float64)
+    tempys_cut = np.zeros((len(ys), (len(tempys_ext[0])-((extendedr*2)+1)*2)))
+    tempxs_cut = np.zeros(len(tempys_cut[0]))
+    for p in range(len(ys)):
+        tempys_ext[p] = np.pad(ys[p], extendedr, 'constant', constant_values=(0))
+        tempys_ext[p] = np.roll(tempys_ext[p],offset[-1][p]) ## assumes 6Li at -1 position
+        tempys_cut[p] = tempys_ext[p][((extendedr*2)+1):-((extendedr*2)+1)].copy() ## cut by 7 (if extRange == 3)
+#         tempys_cut[p] = tempys_cut[p]/HeNorms[p] ## normalize by 3He integral
+    x_cut_amt = int((len(ys[0]) - len(tempys_cut[0]))/2)
+    tempxs_cut = xs_arr[x_cut_amt:-x_cut_amt].copy()
+    return tempys_cut, tempxs_cut
+
+# Below commented out for testing without t0 aligning 08.08.24 ##
+# try:
+#     for i in range(len(ys_basesub)):
+#         ys_cut[i], xs_cut[i] = align_cut(ys_basesub[i], xs[i], extendedRange)
+# except Exception as e:
+#     logger.error(run_num + ' failed aligning and cutting')
+#     logger.exception(e)
+
+    
+# checkp = 2053
+# print(offset[-1][checkp]) ## checking offset for one example checkpulse
+# print('original index for checkpulse: '+str(np.argmax(ys_basesub[0][checkp]> 2000))) ## we can follow the index as it changes with extension/cut
+# #print('extended range index for checkpulse: '+str(np.argmax(ys_ext[0][checkp]> 2000)))
+# print('cut array index for checkpulse: '+str(np.argmax((ys_cut[0][checkp]*HeNorms[checkp])> 2000)))
+
+# del ys_ext ## might help with memory issues
+# del ys_basesub
+
+end = time.time()
+print('aligning and cutting time: ' + str(end-start))            
 
 # In[7]:
 
@@ -397,107 +511,9 @@ except Exception as e:
     logger.exception(e)
 
 # print('sequences '+str(sequence[0]))
+
 print(str(len(sequence[0]))+' sequences with sequence order: '+str(sequence[1][0]))
 # print(leftovers)
-
-
-# In[10]:
-
-## use 6Li t0 for all instead of for themselves individually
-
-start = time.time()
-
-NaIthresh=2000
-Li6thresh=1000
-
-threshold_array = (np.full(len(ys_basesub), NaIthresh))
-threshold_array[-1] = Li6thresh
-
-#@njit ## numba does not support reversed, but this could be changed if it's slow
-def find_offset(ys, thresharr):
-    xCrosses = np.zeros((len(ys), numRuns)) #outer array is crossing arrays for given channel, inner array is crossing for each event
-    offset = np.zeros((len(ys), numRuns), dtype=np.int32) ##offset in bins for each channel, each pulse
-    modeCrosses = np.zeros((len(ys)), dtype=np.float64)
-    for i in reversed(range(len(ys))):
-        #xValues.append([])
-        for p in range(len(ys[i])):
-            xing = np.argmax(ys[i][p] > thresharr[i])
-            #print(xing)
-            xCrosses[i][p] = xing
-        modeCrosses[i] = (st.mode(xCrosses[i])) #find the most typical crossing value for each channel
-        for p in range(len(xCrosses[i])):
-            offset[i][p] = (modeCrosses[-1] - xCrosses[i][p]) ## make sure this is the correct sign!!! 
-    if (np.all(xCrosses[-1])) == False:
-        emessage = ('ERROR: 6Li threshold was not reached for at least one pulse')
-        logger.error(run_num + emessage)
-        raise Exception(emessage)
-    return offset, xCrosses, modeCrosses
-                           
-offset, xCrosses, modeCrosses = find_offset(ys_basesub, threshold_array)
-
-end = time.time()
-# print('finding offset time: ' + str(end-start))  
-
-
-# In[11]:
-
-## this cell loops through every channel as opposed to inputting all channels at once. 5x faster
-
-start = time.time()
-
-## extend all arrays by a value, check that the max number of offset on 6Li is less than that value ##
-extendedRange = 3 ## must be a positive value which to extend ys_arr
-if abs(max(offset[-1], key = abs)) > extendedRange: ## if the max offset of 6Li is >extendedRange, something is wrong
-    emessage = ('ERROR: largest offset greater than extended range')
-    logger.error(run_num + emessage)
-    raise Exception(emessage)
-
-ys_ext = np.zeros((len(ys_basesub), len(ys_basesub[0]), len(ys_basesub[0][0])+extendedRange*2), dtype=np.float64)
-ys_cut = np.zeros((len(ys_basesub), len(ys_basesub[0]), (len(ys_ext[0][0])-((extendedRange*2)+1)*2)))
-
-# Below commented out for testing without t0 aligning 08.08.24
-try:
-    ys_ext = np.zeros((len(ys_basesub), len(ys_basesub[0]), len(ys_basesub[0][0])+extendedRange*2), dtype=np.float64)
-    ys_cut = np.zeros((len(ys_basesub), len(ys_basesub[0]), (len(ys_ext[0][0])-((extendedRange*2)+1)*2)))
-    xs_cut = np.zeros((len(ys_cut), len(ys_cut[0][0])))
-except Exception as e:
-    logger.error(run_num + ' failed during ys_cut array creation')
-    logger.exception(e)
-
-# cant use jit because np.pad is not supported
-def align_cut_norm(ys, xs_arr, extendedr):
-    tempys_ext = np.zeros((len(ys), len(ys[0])+extendedr*2), dtype=np.float64)
-    tempys_cut = np.zeros((len(ys), (len(tempys_ext[0])-((extendedr*2)+1)*2)))
-    tempxs_cut = np.zeros(len(tempys_cut[0]))
-    for p in range(len(ys)):
-        tempys_ext[p] = np.pad(ys[p], extendedr, 'constant', constant_values=(0))
-        tempys_ext[p] = np.roll(tempys_ext[p],offset[-1][p]) ## assumes 6Li at -1 position
-        tempys_cut[p] = tempys_ext[p][((extendedr*2)+1):-((extendedr*2)+1)].copy() ## cut by 7 (if extRange == 3)
-        tempys_cut[p] = tempys_cut[p]/HeNorms[p] ## normalize by 3He integral
-    x_cut_amt = int((len(ys[0]) - len(tempys_cut[0]))/2)
-    tempxs_cut = xs_arr[x_cut_amt:-x_cut_amt].copy()
-    return tempys_cut, tempxs_cut
-
-## Below commented out for testing without t0 aligning 08.08.24
-try:
-    for i in range(len(ys_basesub)):
-        ys_cut[i], xs_cut[i] = align_cut_norm(ys_basesub[i], xs[i], extendedRange)
-except Exception as e:
-    logger.error(run_num + ' failed aligning and cutting')
-    logger.exception(e)
-    
-# checkp = 2053
-# print(offset[-1][checkp]) ## checking offset for one example checkpulse
-# print('original index for checkpulse: '+str(np.argmax(ys_basesub[0][checkp]> 2000))) ## we can follow the index as it changes with extension/cut
-# #print('extended range index for checkpulse: '+str(np.argmax(ys_ext[0][checkp]> 2000)))
-# print('cut array index for checkpulse: '+str(np.argmax((ys_cut[0][checkp]*HeNorms[checkp])> 2000)))
-
-del ys_ext ## might help with memory issues
-del ys_basesub
-
-end = time.time()
-print('aligning and cutting time: ' + str(end-start))            
-
 
 # In[46]:
 
@@ -505,19 +521,16 @@ print('aligning and cutting time: ' + str(end-start))
 #  turning into a by-channel function 06.13.24 ##
 
 start = time.time()
-
 sequence = np.asarray(sequence, dtype = object)
 
-# ON_OFF_sums = np.zeros((len(ys_cut), len(sequence[0]), 2, len(ys_cut[0][0])), dtype=np.float64) ## 13 sequences, 2 for ON or OFF for each sequence
-ON_sums = np.zeros((len(ys_cut), len(sequence[0]), len(ys_cut[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for ON
-OFF_sums = np.zeros((len(ys_cut), len(sequence[0]), len(ys_cut[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for OFF
-ON_minus_sums = np.zeros((len(ys_cut), len(sequence[0]),2, len(ys_cut[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for ON
-ON_plus_sums = np.zeros((len(ys_cut), len(sequence[0]),2, len(ys_cut[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for OFF
+# added_pulses = np.zeros((len(ys_cut), len(sequence[0]), 8, len(ys_cut[0][0])), dtype=np.float64) ## 13 sequences, 8 stages each works?<br>
+# i channels, 13 sequences each, 8 states each sequence, 8992 num points ##
 
-# ON_sums = np.zeros((len(ys_basesub), len(sequence[0]), len(ys_basesub[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for ON
-# OFF_sums = np.zeros((len(ys_basesub), len(sequence[0]), len(ys_basesub[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for OFF
-# ON_minus_sums = np.zeros((len(ys_basesub), len(sequence[0]),2, len(ys_basesub[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for ON
-# ON_plus_sums = np.zeros((len(ys_basesub), len(sequence[0]),2, len(ys_basesub[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for OFF
+# ON_OFF_sums = np.zeros((len(ys_cut), len(sequence[0]), 2, len(ys_cut[0][0])), dtype=np.float64) ## 13 sequences, 2 for ON or OFF for each sequence
+ON_sums = np.zeros((len(ys_basesub), len(sequence[0]), len(ys_basesub[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for ON
+OFF_sums = np.zeros((len(ys_basesub), len(sequence[0]), len(ys_basesub[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for OFF
+ON_minus_sums = np.zeros((len(ys_basesub), len(sequence[0]),2, len(ys_basesub[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for ON
+ON_plus_sums = np.zeros((len(ys_basesub), len(sequence[0]),2, len(ys_basesub[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for OFF
 # ON_minus/plus_sums have their 2 for associated OFF states in the second array
 
 # @njit
@@ -534,75 +547,58 @@ def add_pulse(ys, SFarr):
     #         print("states loop " + str(range(0, len(SFarr[1][0]))[0]) + ' - ' +  str(range(0, len(SFarr[1][0]))[-1]))
             s = SFarr[1][seq][state] ## try this to condense code. Basically, the state currently at
             if s==0 or s==3 or s==5 or s==6: ## these are ON states
-#                 print('"s" state '+str(s))
+#                 print('ON "s" state '+str(s))
 #                 print('"state" ' +str(state) + ' from ' + str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))))
-#                 print('actually from '+str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[0]) +
+#                 print('sums from '+str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[0]) +
 #                 ' - ' +str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[-1]) + '\n')
                 for p in range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
                     temp_ON[seq] = np.add(temp_ON[seq],ys[p]) ## start with zeros, add to each iteratively
+#                     print(p)
+                #         below is for splitting up into ON(-) and ON(+) and their associated OFF states (1 state forward for -, 1 state backward for +)
+                if s==0 or s==6: ## these or ON(-) states
+                    OFF_i = np.where(np.asarray(SFarr[1][0])==s+1)[0][0] ## find where in sequence state = s(ON-)+1    
+    #                 print('ON(-) "s" ' +str(s) + ' from ' + str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))))
+                    for p in range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
+                        temp_ON_min[seq][0] = np.add(temp_ON_min[seq][0],ys[p]) ## start with zeros, add to each iteratively
+    #                 print('OFF state ' + str(SFarr[1][seq][OFF_i]))
+                    for p in range((SFarr[2][seq][OFF_i][0]),(SFarr[2][seq][OFF_i][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
+                        temp_ON_min[seq][1] = np.add(temp_ON_min[seq][1],ys[p]) ## start with zeros, add to each iteratively
+                if s==3 or s==5: ## these or ON(+) states
+                    OFF_i = np.where(np.asarray(SFarr[1][0])==s-1)[0][0] ## find where in sequence state = s(ON+)-1    
+    #                 print('ON(+) "s" ' +str(s) + ' from ' + str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))))
+                    for p in range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
+                        temp_ON_plu[seq][0] = np.add(temp_ON_plu[seq][0],ys[p]) ## start with zeros, add to each iteratively
+    #                 print('OFF state ' + str(SFarr[1][seq][OFF_i]))
+                    for p in range((SFarr[2][seq][OFF_i][0]),(SFarr[2][seq][OFF_i][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
+                        temp_ON_plu[seq][1] = np.add(temp_ON_plu[seq][1],ys[p]) ## start with zeros, add to each iteratively
             if s==1 or s==2 or s==4 or s==7: ## these are OFF states
-#                 print('"s" state '+str(s))
+#                 print('OFF "s" state '+str(s))
 #                 print('"state" ' +str(state) + ' from ' + str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))))
-#                 print('actually from '+str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[0]) +
+#                 print('sums from '+str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[0]) +
 #                 ' - ' +str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[-1]) + '\n')
                 for p in range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
                     temp_OFF[seq] = np.add(temp_OFF[seq],ys[p]) ## start with zeros, add to each iteratively
-#         below is for splitting up into ON(-) and ON(+) and their associated OFF states (1 state forward for -, 1 state backward for +)
-            if s==0 or s==6: ## these or ON(-) states
-                OFF_i = np.where(np.asarray(SFarr[1][0])==s+1)[0][0] ## find where in sequence state = s(ON-)+1    
-#                 print('ON(-) "s" ' +str(s) + ' from ' + str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))))
-                for p in range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
-                    temp_ON_min[seq][0] = np.add(temp_ON_min[seq][0],ys[p]) ## start with zeros, add to each iteratively
-#                 print('OFF state ' + str(SFarr[1][seq][OFF_i]))
-                for p in range((SFarr[2][seq][OFF_i][0]),(SFarr[2][seq][OFF_i][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
-                    temp_ON_min[seq][1] = np.add(temp_ON_min[seq][1],ys[p]) ## start with zeros, add to each iteratively
-            if s==3 or s==5: ## these or ON(+) states
-                OFF_i = np.where(np.asarray(SFarr[1][0])==s-1)[0][0] ## find where in sequence state = s(ON+)-1    
-#                 print('ON(+) "s" ' +str(s) + ' from ' + str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))))
-                for p in range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
-                    temp_ON_plu[seq][0] = np.add(temp_ON_plu[seq][0],ys[p]) ## start with zeros, add to each iteratively
-#                 print('OFF state ' + str(SFarr[1][seq][OFF_i]))
-                for p in range((SFarr[2][seq][OFF_i][0]),(SFarr[2][seq][OFF_i][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
-                    temp_ON_plu[seq][1] = np.add(temp_ON_plu[seq][1],ys[p]) ## start with zeros, add to each iteratively
+#                     print(p)
     return temp_ON, temp_OFF, temp_ON_min, temp_ON_plu
 
-for i in range(len(ys_cut)):
-#     print('## channel: ' + str(i) + ' ##')
-    ON_sums[i], OFF_sums[i], ON_minus_sums[i], ON_plus_sums[i] = add_pulse(ys_cut[i], sequence)
+for i in range(len(ys_basesub)):
+#     print('#################### channel: ' + str(i) + ' ##########################')
+    ON_sums[i], OFF_sums[i], ON_minus_sums[i], ON_plus_sums[i] = add_pulse(ys_basesub[i], sequence)
+    
+# for i in range(len(ys_basesub)-12):
+#     print('#################### channel: ' + str(i) + ' ##########################')
+#     ON_sums[i], OFF_sums[i], ON_minus_sums[i], ON_plus_sums[i] = add_pulse(ys_basesub[i], sequence)
+
+# plt.legend()
+# plt.show()
 
 end = time.time()
-print('summing pulses into their states time: ' + str(end-start)) 
+print('summing pulses into their states time: ' + str(end-start))  
 
-
-# In[48]:
-
-start = time.time()
-
-#### OLD ASYM ####
-
-## take off asym for now 08.09.24
-# Asym = np.zeros((len(ON_OFF_sums), len(ON_OFF_sums[0][0][0])), dtype=np.float64) ## 1 Asym for each channel, not for each sequence (can change)
-
-def asym(ON_OFF_arr):
-    tempasym = np.zeros((len(ON_OFF_arr[0][0])), dtype=np.float64)
-    for seq in range(len(ON_OFF_arr[0])): ## number of sequences
-        asymform = ((ON_OFF_arr[seq][0]-ON_OFF_arr[seq][1]) / (ON_OFF_arr[seq][0]+ON_OFF_arr[seq][1]))
-        tempasym = np.add(asymform,tempasym)
-    normedasym = tempasym/len(ON_OFF_arr)
-    return normedasym
-
-## take off asym for now 08.09.24
-# for i in range(len(ON_OFF_sums)):
-#     Asym[i] = asym(ON_OFF_sums[i])
-
-end = time.time()
-# print('calculate asymmetry time: ' + str(end-start)) 
-
-#### end OLD ####
-#### NEW ####
+# In[14]:
 
 asym_ch = np.zeros((len(ON_sums), len(ON_sums[0][0])), dtype=np.float64) ## 1 Asym for each channel, not for each sequence (can change?)
-asym_pm = np.zeros((len(ON_plus_sums),2, len(ON_plus_sums[0][0][0])), dtype=np.float64) ## 2 Asyms for each channel, one for ON(+), one for ON(-)
+asym_pm = np.zeros((len(ON_plus_sums),2, len(ON_plus_sums[0][0][0])), dtype=np.float64) ## 1 Asym for each channel, not for each sequence (can change?)
 
 def asym2(ON_arr, OFF_arr):
     tempasym = np.zeros((len(ON_arr[0])), dtype=np.float64)
@@ -619,12 +615,10 @@ for i in range(len(ON_sums)):
     asym_pm[i][1] = asym2(ON_minus_sums[i][0], ON_minus_sums[i][1])
     # print('ch done')
 
-#### end NEW ####
-
 # In[13]:
 
 np.save(os.getcwd() + AsymSavename, asym_ch)
-np.save(os.getcwd() + '/processed_data/'+ 'xs_cut', xs_cut)
+np.save(os.getcwd() + '/processed_data/'+ 'xs_uncut', xs)
 np.save(os.getcwd() + pmSavename, asym_pm)
 # np.save(os.getcwd() + AsymSavename, Asym)
 
@@ -634,6 +628,3 @@ print('finished ' + str(datetime.now()))
 print('\n')
 
 # ## end of data processing ##
-
-
-# In[57]:
