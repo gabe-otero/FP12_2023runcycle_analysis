@@ -435,7 +435,7 @@ print('aligning and cutting time: ' + str(end-start))
 # plt.title('One pulse') 
 # plt.xlabel("time from trigger (ns)")
 # plt.ylabel("ADC")
-# # plt.ylabel("uC/sec")
+# # plt.ylabel("nC/sec")
 
 # # ys_subset = ys_basesub[11][0][5000:9000].copy()
 # # xs_subset = xs[0][5000:9000].copy()
@@ -547,7 +547,7 @@ for i in range(len(pks_beg)):
 plt.ioff()
 # start = time.time()
 Q_sec = ((2/4096)/50) ## 4096 ADC = 2V, divide by 50Ohm to get I [Q/sec]
-sec = (512*(10e-9)) ## 512 ns/bin here
+sec = (512e-9) ## 512 ns/bin here
 binnum = 500
 
 ints_beg_all = [] ## all pulse mode integrals for a given channel
@@ -557,9 +557,9 @@ jit_np_end = np.asarray(ints_end_jit_2, dtype = object)
 
 for i in range(len(ints_beg_jit_2)):
     ints_beg_all.append(np.hstack(jit_np_beg[i]*Q_sec*sec))
-    ints_beg_all[i] = ints_beg_all[i]*10e6  ## convert to uC
+    ints_beg_all[i] = ints_beg_all[i]*1e9  ## convert to nC
     ints_end_all.append(np.hstack(jit_np_end[i]*Q_sec*sec))
-    ints_end_all[i] = ints_end_all[i]*10e6
+    ints_end_all[i] = ints_end_all[i]*1e9
     
 histdat_beg = [] ## all pulse mode histograms from the integrals
 histdat_end = []
@@ -567,19 +567,19 @@ histdat_end = []
 for i in range(len(ints_beg_all)):
     beghist = ints_beg_all[i]
     endhist = ints_end_all[i]
-    beg_binval = np.histogram(beghist, bins = binnum, range = [0, 0.60]) ## this is a 2d array of bin y values and their bin locations
-    end_binval = np.histogram(endhist, bins = binnum, range = [0, 0.60])
+    beg_binval = np.histogram(beghist, bins = binnum, range = [0, 6.0]) ## this is a 2d array of bin y values and their bin locations
+    end_binval = np.histogram(endhist, bins = binnum, range = [0, 6.0])
     histdat_beg.append(beg_binval)  ## 2d array of [[counts values], [bin locations (1 extra)]]
     histdat_end.append(end_binval)
 
 # end = time.time()
-# print('making histograms, changing to [uC]: ' + str(end-start))
+# print('making histograms, changing to [nC]: ' + str(end-start))
 
 # In[15]:
 
 ## maybe include peak locations? but this would be a ch*pulse*# peaks sized array, very long
 
-cols = ['channel', 'begregion_integrals[uC]', 'endregion_integrals[uC]', 'begregion_hist[uC]', 'endregion_hist[uC]']
+cols = ['channel', 'begregion_integrals[nC]', 'endregion_integrals[nC]', 'begregion_hist[nC]', 'endregion_hist[nC]']
 intsData = [chan_enab[:-1], ints_beg_all, ints_end_all, histdat_beg, histdat_end]
 
 df_ints = pd.DataFrame({cols[0]: intsData[0],            
@@ -602,8 +602,8 @@ print('\n')
 # In[17]:
 # ### testing end historgam - beg histogram
 
-# testarr1 = df_ints['begregion_hist[uC]'].to_numpy()
-# testarr2 = df_ints['endregion_hist[uC]'].to_numpy()
+# testarr1 = df_ints['begregion_hist[nC]'].to_numpy()
+# testarr2 = df_ints['endregion_hist[nC]'].to_numpy()
 # # print(testarr1[0])
 # # print(len(testarr1[0]))
 
@@ -617,7 +617,7 @@ print('\n')
 
 # testend_beg = testxend[0]-testxbeg[0]
 # plt.bar(testx[1][:-1], testend_beg, width = max(testx[1])/len(testx[0]))  ## this plots the previous histogram !!!
-# plt.xlabel('uC')
+# plt.xlabel('nC')
 # plt.title('end-beg region pulse integrals run ' + run_num)
 # plt.show() 
 

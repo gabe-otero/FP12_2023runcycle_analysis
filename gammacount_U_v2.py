@@ -62,7 +62,7 @@ if not os.path.exists(os.getcwd()+processederrorfolder):
 else:
     pass
 
-start = time.time()
+# start = time.time()
 fullstart = time.time()
 
 # read_data = np.array([])
@@ -91,7 +91,7 @@ if chan_enab[-1] != 24:
 
 # print('saving processed data to ' + AsymSavename)
 print("Channel is " + str(chan_enab))
-end = time.time()
+# end = time.time()
 # print('file open time: ' + str(end-start))      
 # print(read_data)
 
@@ -279,7 +279,7 @@ baseR = int(((preTime[0]-groupStart[0])*0.70)/chanDec[0])  ##70% before the trig
 numRuns = int((fileLength[0]-20-numSamples[0])/(numSamples[0]+6)+1)
 legend =  ['NaI', 'R']
 
-start = time.time()
+# start = time.time()
 
 s = 20 ## pulse to look at 
 t=s+1
@@ -334,8 +334,8 @@ for i in range(len(ys_basesub)): ## feeding y arrays into function 1 channel at 
 ys_basesub[-1] = ys_basesub[-1]*-1 ## invert 6Li to positive signal. Comment out if not using
 # ys_basesub_norm[-1] = ys_basesub_norm[-1]*-1 ## invert 6Li to positive signal. Comment out if not using
 
-end = time.time()
-print('plotting and/or base subtraction time: ' + str(end-start))            
+# end = time.time()
+# print('plotting and/or base subtraction time: ' + str(end-start))            
 
 # In[9]:
 
@@ -369,7 +369,7 @@ def find_offset(ys, thresharr):
                            
 offset, xCrosses, modeCrosses = find_offset(ys_basesub, threshold_array)
 
-end = time.time()
+# end = time.time()
 # print('finding offset time: ' + str(end-start))  
 
 # extend all arrays by a value, check that the max number of offset on 6Li is less than that value ##
@@ -472,11 +472,9 @@ print('aligning and cutting time: ' + str(end-start))
 def find_peaks_2(ys, pkparam, peakrange): ## ys here is for one channel!
 #     pulse_arr = [[],[]] ## peaks index, pulse sum ranges
     all_peaks = []
-    sum_ranges = []
     ext = 40  ## how much to extend range by. Otherwise, can miss some peaks at the ends due to prominence
     for p in range(len(ys)):  ## find peaks for every pulse p in one detector channel
 #         print(p)
-        p_sum_ranges = []
         if peakrange[0] <= 0:
             peaks, _ = sp.signal.find_peaks(ys[p][peakrange[0]:peakrange[1]+ext], threshold=pkparam[0], prominence=pkparam[1], height=pkparam[2])#, height  = [1,1000])
         else:
@@ -531,7 +529,7 @@ def integrate_peaks_jit_2(ys, peaks): ## ranges in which to integrate int_ranges
         peak_integrals.append(peak_ints)
     return peak_integrals
     
-start = time.time()
+# start = time.time()
 
 ints_beg_jit_2 =List()
 ints_end_jit_2 =List()
@@ -541,15 +539,16 @@ for i in range(len(pks_beg)):
     ints_beg_jit_2.append(integrate_peaks_jit_2(ys_cut[i], pks_beg[i]))
     ints_end_jit_2.append(integrate_peaks_jit_2(ys_cut[i], pks_end[i]))
 
-end = time.time()
-print('integrating peaks time: ' + str(end-start))
+# end = time.time()
+# print('integrating peaks time: ' + str(end-start))
 
 # In[14]:
 
 plt.ioff()
-start = time.time()
+# start = time.time()
 Q_sec = ((2/4096)/50) ## 4096 ADC = 2V, divide by 50Ohm to get I [Q/sec]
-sec = (512*(10e-9))
+sec = (512*(10e-9)) ## 512 ns/bin here
+binnum = 500
 
 ints_beg_all = [] ## all pulse mode integrals for a given channel
 ints_end_all = []
@@ -568,13 +567,13 @@ histdat_end = []
 for i in range(len(ints_beg_all)):
     beghist = ints_beg_all[i]
     endhist = ints_end_all[i]
-    beg_binval = plt.hist(beghist, bins = 200, range = [0, 0.60]) ## this is a 2d array of bin y values and their bin locations
-    end_binval = plt.hist(endhist, bins = 200, range = [0, 0.60])
+    beg_binval = np.histogram(beghist, bins = binnum, range = [0, 0.60]) ## this is a 2d array of bin y values and their bin locations
+    end_binval = np.histogram(endhist, bins = binnum, range = [0, 0.60])
     histdat_beg.append(beg_binval)  ## 2d array of [[counts values], [bin locations (1 extra)]]
     histdat_end.append(end_binval)
 
-end = time.time()
-print('making histograms, changing to [uC]: ' + str(end-start))
+# end = time.time()
+# print('making histograms, changing to [uC]: ' + str(end-start))
 
 # In[15]:
 
