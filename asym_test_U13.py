@@ -18,11 +18,6 @@ warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
 warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 warnings.filterwarnings(action='ignore', message='RuntimeWarning: overflow encountered in multiply')
 
-analysisdir = os.getcwd()
-basedir = os.path.dirname(os.getcwd())+'/'
-# print(basedir)
-os.chdir(basedir)
-
 ############## real running ##############
 
 for arg in sys.argv:
@@ -34,21 +29,24 @@ run_start=str(sys.argv[1]).zfill(5)
 run_end=str(sys.argv[2]).zfill(5)
 run_num=str(sys.argv[3]).zfill(5)
 
+os.chdir('F:/LANL/')
 datadir = 'D:/LANSCE_FP12_2023/data/' ## add directory of hard drive
 uniquefolder = "runs" + str(run_start) + "-" + str(run_end) +"/"
 SFNormFile = 'SF_Norm_files/'+uniquefolder+run_num
-statefileloc = basedir+'\SF_Norm_files\TR_R_expected_avgs_stds_afterclip.csv'
-processedpolfolder = '/processed_data/'+uniquefolder+'pulseadd_D/'
-# processedasymfolder = '/processed_data/'+uniquefolder+'asym_D/'
-# processedasymfolder_bg = '/processed_data/'+uniquefolder+'asym_bg_D/'
-polSavename = os.getcwd()+processedpolfolder+run_num+'_pulseadd_D'
-# AsymSavename = os.getcwd()+processedasymfolder+run_num+'_asym_D'
-# AsymSavename_bg = os.getcwd()+processedasymfolder_bg+run_num+'_asym_bg_D'
-logger.add(basedir+"/processed_data/" + uniquefolder + '0_ErrorLog_'+run_start+'_'+run_end+'pulseadd_D.txt', delay = False)
+statefileloc = 'F:\LANL\SF_Norm_files\TR_R_expected_avgs_stds_afterclip.csv'
+processedONOFFfolder = '/processed_data/'+uniquefolder+'ONOFF_U/'
+processedasymfolder = '/processed_data/'+uniquefolder+'asym_U/'
+processedasymfolder_bg = '/processed_data/'+uniquefolder+'asym_bg_U/'
+ONOFFSavename = os.getcwd()+processedONOFFfolder+run_num+'_ONOFF_U'
+AsymSavename = os.getcwd()+processedasymfolder+run_num+'U'
+AsymSavename_bg = os.getcwd()+processedasymfolder_bg+run_num+'_asym_bg_U'
+logger.add("F:/LANL/processed_data/" + uniquefolder + '0_ErrorLog_'+run_start+'_'+run_end+'_U.txt', delay = False)
 
-if not os.path.exists(os.getcwd()+processedpolfolder):
+if not os.path.exists(os.getcwd()+processedONOFFfolder) or not os.path.exists(os.getcwd()+processedasymfolder) or not os.path.exists(os.getcwd()+processedasymfolder_bg):
     # Create the directory
-    os.makedirs(os.getcwd()+processedpolfolder)
+    os.makedirs(os.getcwd()+processedONOFFfolder)
+    os.makedirs(os.getcwd()+processedasymfolder)
+    os.makedirs(os.getcwd()+processedasymfolder_bg)
     print("Directory created successfully")
 else:
     pass
@@ -56,6 +54,7 @@ else:
 ############## test running ##############
 
 # run_num = '12036'
+# os.chdir('F:/LANL/')
 # datadir = 'sample_data/'
 # runs_folder = 'runs12034-12363/'
 # uniquefolder = 'debug_sample/'+runs_folder
@@ -63,8 +62,8 @@ else:
 # # SFNormFile = 'SF_Norm_files/'+uniquefolder+run_num
 # SFNormFile = 'SF_Norm_files/'+runs_folder+run_num
 # # AsymSavename = '****testing testing testing'
-# ONOFFSavename = basedir+'/testing_ONOFF'
-# AsymSavename = basedir+'/testing_asyms'
+# ONOFFSavename = 'F:/LANL/testing_ONOFF'
+# AsymSavename = 'F:/LANL/testing_asyms'
 
 ##########################################
 
@@ -72,10 +71,11 @@ else:
 
 # cannot handle all 24 detectors at once, memory issue... can look into np.empty and deleting variables if needed ##
 # chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]) ## all
-chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,24]) ## downstream _D
-# chan_enab = np.array([12,13,14,15,16,17,18,19,20,21,22,23,24]) ## upstream _U
+# chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,24]) ## downstream
+chan_enab = np.array([12,13,14,15,16,17,18,19,20,21,22,23,24]) ## upstream
 
 # print(os.getcwd() + folder)
+
 start = time.time()
 fullstart = time.time()
 
@@ -104,7 +104,7 @@ if chan_enab[-1] != 24:
 end = time.time()
 
 # print('file open time: ' + str(end-start))            
-print('saving processed data to ' + polSavename)
+print('saving processed data to ' + AsymSavename)
 print("Channel is " + str(chan_enab))
 
 # In[2]:
@@ -267,7 +267,6 @@ for i in range(0,len(chan_enab)):
 # In[6]:
 
 # Load in SF and He normalization information ##
-# SFNormFile2 = 'F:/LANL/SF_Norm_files/runs12034-12363/12036.h5' ## change sf norm file here or use default
 
 try:
     df_SF = pd.read_hdf(SFNormFile + '.h5', key='df_0')
@@ -276,7 +275,7 @@ except Exception as e:
     logger.error('run '+run_num + ' failed during SFNormFile load')
     logger.exception(e)
 
-# SF_Sort_arr = df_SF[['nicknames', 'transition_locations']].to_numpy().T
+SF_Sort_arr = df_SF[['nicknames', 'transition_locations']].to_numpy().T
 He_Norm_arr = df_HE[['pulse', 'norms','puckval']].to_numpy().T
 
 if shutterFlag == 0:
@@ -358,7 +357,7 @@ end = time.time()
 start = time.time()
 
 NaIthresh=2000
-Li6thresh=400
+Li6thresh=1000
 threshold_array = (np.full(len(ys_basesub), NaIthresh))
 threshold_array[-1] = Li6thresh
 
@@ -381,12 +380,8 @@ def find_offset(ys, thresharr):
         logger.error('run '+run_num + emessage)
         raise Exception(emessage)
     return offset, xCrosses, modeCrosses
-
-if shutterFlag == 0:
-    print('Shutter closed. No t0 offsets')
-    offset = np.zeros((len(ys_basesub), numRuns), dtype=np.int32)
-if shutterFlag == 1:
-    offset, xCrosses, modeCrosses = find_offset(ys_basesub, threshold_array)
+                           
+offset, xCrosses, modeCrosses = find_offset(ys_basesub, threshold_array)
 
 end = time.time()
 # print('finding offset time: ' + str(end-start))  
@@ -493,361 +488,336 @@ def find_leftover(SFsort_info, seq_arr): ## in case we want to use the other 6 s
             left[2].append([(SFsort_info[1][i])+5,(SFsort_info[1][i+1])])
     return left
 
-######################## SF organization commented out for pol ########################
-print('skipped SF organization')
+try:
+    sequence = organize_SF(SF_Sort_arr)
+    if len(sequence[0]) == 14: ## catches state switches at pulse 0, leftovers are at the end of the regular sequence
+        leftovers = [[sequence[0][-1]],[sequence[1][-1]],[sequence[2][-1]]]
+        for i in range(len(sequence)):
+            sequence[i].pop(-1) ## deletes the leftovers sequence for state switches at pulse 0
+    else:
+        leftovers = find_leftover(SF_Sort_arr, sequence) ## otherwise can use normal function
+except Exception as e:
+    logger.error('run '+run_num + ' failed during sequencing')
+    logger.exception(e)
 
-# In[12]
-# try:
-#     sequence = organize_SF(SF_Sort_arr)
-#     if len(sequence[0]) == 14: ## catches state switches at pulse 0, leftovers are at the end of the regular sequence
-#         leftovers = [[sequence[0][-1]],[sequence[1][-1]],[sequence[2][-1]]]
-#         for i in range(len(sequence)):
-#             sequence[i].pop(-1) ## deletes the leftovers sequence for state switches at pulse 0
-#     else:
-#         leftovers = find_leftover(SF_Sort_arr, sequence) ## otherwise can use normal function
-# except Exception as e:
-#     logger.error('run '+run_num + ' failed during sequencing')
-#     logger.exception(e)
-
-# print(str(len(sequence[0]))+' sequences with sequence order: '+str(sequence[1][0]))
+# print('sequences '+str(sequence[0]))
+print(str(len(sequence[0]))+' sequences with sequence order: '+str(sequence[1][0]))
 # print(leftovers)
 
+# In[12]:
 #  add up pulses for their respective state, in each 8 step sequence ##
 #  turning into a by-channel function 06.13.24 ##
 
-# start = time.time()
-# sequence = np.asarray(sequence, dtype = object)
-
-# ON_sums = np.zeros((len(ys_cut), len(sequence[0]), len(ys_cut[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for ON
-# OFF_sums = np.zeros((len(ys_cut), len(sequence[0]), len(ys_cut[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for OFF
-
-# @njit
-# def add_pulse(ys, SFarr):
-#     temp_ON = np.zeros((len(SFarr[0]), len(ys[0])), dtype=np.float64)
-#     temp_OFF = np.zeros((len(SFarr[0]), len(ys[0])), dtype=np.float64)
-#     for seq in range(0, len(SFarr[0])): ## for every sequence
-#     #         print('seq:' +str(SFarr[0][seq]))
-# #         print('seq:' +str(seq))
-#         for state in range(0, len(SFarr[1][0])): ## for every state in the sequence
-#     #         print("states loop " + str(range(0, len(SFarr[1][0]))[0]) + ' - ' +  str(range(0, len(SFarr[1][0]))[-1]))
-#             s = SFarr[1][seq][state] ## try this to condense code. Basically, the state currently at
-#             if s==0 or s==3 or s==5 or s==6: ## these are ON states
-# #                 print('ON "s" state '+str(s))
-# #                 print('"state" ' +str(state) + ' from ' + str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))))
-# #                 print('sums from '+str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[0]) +
-# #                 ' - ' +str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[-1]) + '\n')
-#                 for p in range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
-#                     temp_ON[seq] = np.add(temp_ON[seq],ys[p]) ## start with zeros, add to each iteratively
-#             if s==1 or s==2 or s==4 or s==7: ## these are OFF states
-# #                 print('OFF "s" state '+str(s))
-# #                 print('"state" ' +str(state) + ' from ' + str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))))
-# #                 print('sums from '+str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[0]) +
-# #                 ' - ' +str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[-1]) + '\n')
-#                 for p in range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1])):
-#                     temp_OFF[seq] = np.add(temp_OFF[seq],ys[p])
-#     return temp_ON, temp_OFF
-
-
-######################################################################################
-# In[13]
 start = time.time()
-## new pulse add for polarization attempt ##
+sequence = np.asarray(sequence, dtype = object)
 
-# ys_basesub = np.zeros((len(ys_arr), numRuns,numSamples[0]), dtype=np.float64)
-added_pulses = np.zeros((len(ys_cut), len(ys_cut[0][0])), dtype=np.float64)  ## channels, 8992 data points each
+ON_sums = np.zeros((len(ys_cut), len(sequence[0]), len(ys_cut[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for ON
+OFF_sums = np.zeros((len(ys_cut), len(sequence[0]), len(ys_cut[0][0])), dtype=np.float64) ## 13 channels, 13 sequences, added pulses for OFF
 
 # @njit
-def add_pulse_noSF(ys):
-    pulses_sum  = np.zeros((len(ys[0])), dtype=np.float64)
-    for p in range(0, len(ys)):
-        # print('pulse ',p)
-        pulses_sum = np.add(pulses_sum,ys[p])
-    return pulses_sum
+def add_pulse(ys, SFarr):
+    temp_ON = np.zeros((len(SFarr[0]), len(ys[0])), dtype=np.float64)
+    temp_OFF = np.zeros((len(SFarr[0]), len(ys[0])), dtype=np.float64)
+    for seq in range(0, len(SFarr[0])): ## for every sequence
+    #         print('seq:' +str(SFarr[0][seq]))
+#         print('seq:' +str(seq))
+        for state in range(0, len(SFarr[1][0])): ## for every state in the sequence
+    #         print("states loop " + str(range(0, len(SFarr[1][0]))[0]) + ' - ' +  str(range(0, len(SFarr[1][0]))[-1]))
+            s = SFarr[1][seq][state] ## try this to condense code. Basically, the state currently at
+            if s==0 or s==3 or s==5 or s==6: ## these are ON states
+#                 print('ON "s" state '+str(s))
+#                 print('"state" ' +str(state) + ' from ' + str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))))
+#                 print('sums from '+str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[0]) +
+#                 ' - ' +str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[-1]) + '\n')
+                for p in range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1])): ##From 20-60 for example. SFarr[2] is the array of start to end pulses to sum
+                    temp_ON[seq] = np.add(temp_ON[seq],ys[p]) ## start with zeros, add to each iteratively
+            if s==1 or s==2 or s==4 or s==7: ## these are OFF states
+#                 print('OFF "s" state '+str(s))
+#                 print('"state" ' +str(state) + ' from ' + str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))))
+#                 print('sums from '+str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[0]) +
+#                 ' - ' +str(range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1]))[-1]) + '\n')
+                for p in range((SFarr[2][seq][state][0]),(SFarr[2][seq][state][1])):
+                    temp_OFF[seq] = np.add(temp_OFF[seq],ys[p])
+    return temp_ON, temp_OFF
 
 for i in range(len(ys_cut)):
-    # print('#################### channel: ' + str(i) + ' ##########################')
-    added_pulses[i] = add_pulse_noSF(ys_cut[i])
+#     print('#################### channel: ' + str(i) + ' ##########################')
+    ON_sums[i], OFF_sums[i] = add_pulse(ys_cut[i], sequence)
+    
+# for i in range(len(ys_basesub)-12):
+#     print('#################### channel: ' + str(i) + ' ##########################')
+#     ON_sums[i], OFF_sums[i], ON_minus_sums[i], ON_plus_sums[i] = add_pulse(ys_basesub[i], sequence)
 
 end = time.time()
-# print('summing pulses time: ' + str(end-start))  
-
-#### testing ####
-# for i in range(0, len(added_pulses)):
-#     plt.plot(xs_cut[0], added_pulses[i], label = 'chan ' + str(chan_enab[i]))
-# plt.legend()
-# plt.show()
-
-######################## Don't need BG/Voigt fitting here (?), and no asymm ########################
+print('summing pulses into their states time: ' + str(end-start))  
 
 # In[15]:
 # bg fitting
 
-# from scipy import odr
-# from scipy.special import voigt_profile
-# from scipy.optimize import curve_fit
+from scipy import odr
+from scipy.special import voigt_profile
+from scipy.optimize import curve_fit
 
-# bg_region1_beg = 4180
-# bg_region1_end = 5450
-# bg_region2_beg = 6250
-# bg_region2_end = 8992
-# bg_reg1 = [bg_region1_beg,bg_region1_end]
-# bg_reg2 = [bg_region2_beg,bg_region2_end]
-# fullrange = bg_reg2[1]-bg_reg1[0]
+bg_region1_beg = 4180
+bg_region1_end = 5450
+bg_region2_beg = 6250
+bg_region2_end = 8992
+bg_reg1 = [bg_region1_beg,bg_region1_end]
+bg_reg2 = [bg_region2_beg,bg_region2_end]
+fullrange = bg_reg2[1]-bg_reg1[0]
 
-# # In[18]:
+# In[18]:
 
-# ## change to 2nd order poly in cleaned up version
-# start = time.time()
+## change to 2nd order poly in cleaned up version
+start = time.time()
 
-# def bg_fitsubtract(bef_res_reg, aft_res_reg, ys): ## before/after resonance region [start:end] respectively, ys[ch] to fit
-#     binstot = aft_res_reg[1]-bef_res_reg[0]  ## total number of bins in whole region
-#     x1 = np.arange(bef_res_reg[0], bef_res_reg[1],1)
-#     x2 = np.arange(aft_res_reg[0], aft_res_reg[1],1)
-#     x = np.append(x1,x2)
-#     fullx = np.arange(bef_res_reg[0], aft_res_reg[1],1) ## an array of every x bin in entire region
-#     ys_bgsub = []
-#     for seq in range(0, len(ys)): ## number of sequences, usually 13
-#         fitdata1 = ys[seq][bef_res_reg[0]: bef_res_reg[1]]
-#         fitdata2 = ys[seq][aft_res_reg[0]: aft_res_reg[1]]
-#         datasplice = np.append(fitdata1, fitdata2)
-#         y = datasplice
-#         data = odr.Data(x, y)
-#         poly_model2 = odr.polynomial(2)  # using third order polynomial model
-#         odr_obj = odr.ODR(data, poly_model2)
-#         output = odr_obj.run()  # running ODR fitting
-#         poly2 = np.poly1d(output.beta[::-1])
-#         poly_y2 = poly2(x)
-#         fullpoly_y2 = poly2(fullx)
-#         bgsubtracted = ys[seq][bef_res_reg[0]:aft_res_reg[1]] - fullpoly_y2  ## subtracts RealData-BackgroundFit
-#         ys_bgsub.append(bgsubtracted)
-#     return ys_bgsub
+def bg_fitsubtract(bef_res_reg, aft_res_reg, ys): ## before/after resonance region [start:end] respectively, ys[ch] to fit
+    binstot = aft_res_reg[1]-bef_res_reg[0]  ## total number of bins in whole region
+    x1 = np.arange(bef_res_reg[0], bef_res_reg[1],1)
+    x2 = np.arange(aft_res_reg[0], aft_res_reg[1],1)
+    x = np.append(x1,x2)
+    fullx = np.arange(bef_res_reg[0], aft_res_reg[1],1) ## an array of every x bin in entire region
+    ys_bgsub = []
+    for seq in range(0, len(ys)): ## number of sequences, usually 13
+        fitdata1 = ys[seq][bef_res_reg[0]: bef_res_reg[1]]
+        fitdata2 = ys[seq][aft_res_reg[0]: aft_res_reg[1]]
+        datasplice = np.append(fitdata1, fitdata2)
+        y = datasplice
+        data = odr.Data(x, y)
+        poly_model2 = odr.polynomial(2)  # using third order polynomial model
+        odr_obj = odr.ODR(data, poly_model2)
+        output = odr_obj.run()  # running ODR fitting
+        poly2 = np.poly1d(output.beta[::-1])
+        poly_y2 = poly2(x)
+        fullpoly_y2 = poly2(fullx)
+        bgsubtracted = ys[seq][bef_res_reg[0]:aft_res_reg[1]] - fullpoly_y2  ## subtracts RealData-BackgroundFit
+        ys_bgsub.append(bgsubtracted)
+    return ys_bgsub
 
-# ## background subtraction currently only for NaI detectors
-# num_fittingchs = len(ON_sums)-1  ## removes the Li detector, assumes it is there
-# ON_bgsub = np.zeros((num_fittingchs,len(ON_sums[0]),fullrange), dtype = np.float64) ## channels, sequences, range of bg_ subtraction
-# OFF_bgsub = np.zeros((num_fittingchs,len(ON_sums[0]),fullrange), dtype = np.float64) ## channels, sequences, range of bg_ subtraction
+## background subtraction currently only for NaI detectors
+num_fittingchs = len(ON_sums)-1  ## removes the Li detector, assumes it is there
+ON_bgsub = np.zeros((num_fittingchs,len(ON_sums[0]),fullrange), dtype = np.float64) ## channels, sequences, range of bg_ subtraction
+OFF_bgsub = np.zeros((num_fittingchs,len(ON_sums[0]),fullrange), dtype = np.float64) ## channels, sequences, range of bg_ subtraction
 
-# for i in range(0, len(ON_sums)-1):
-#     if chan_enab[i] == 24:
-#         emessage = ('bg_ fit does not work for 6Li yet')
-#         logger.error('run '+run_num + emessage)
-#         raise Exception(emessage)
-#     ON_bgsub[i]  = bg_fitsubtract(bg_reg1,bg_reg2, ON_sums[i])
-#     OFF_bgsub[i] = bg_fitsubtract(bg_reg1,bg_reg2, OFF_sums[i])
-
-# # end = time.time()
-# # print('bg_ fitting time: ' + str(end-start))  
-
-# # In[19]:
-# # now voigt
-
-# def voigt2(x, sig, gam, xshift, amp):
-#     fit = voigt_profile(x-xshift, sig, gam)*amp
-#     return fit
-
-# # In[21]:
-
-# # res_region_beg = 5450
-# # res_region_end = 6250
-# res_region_beg = bg_region1_end  ##currently res region is not selectable... inside of background region
-# res_region_end = bg_region2_beg
-# res_reg = [res_region_beg,res_region_end]
-# if res_reg[0] < bg_reg1[1] or res_reg[1]>bg_reg2[0]:
-#     emessage = ('Declared Background region and Resonance region have overlapping fitting regions')
-#     logger.error('run '+run_num + emessage)
-#     raise Exception(emessage)
-
-# xdata = xs_cut[0][res_reg[0]:res_reg[1]]*1e-6  ## just change all xs to ms and one array
-
-# # In[22]:
-
-# # resonance region is assumed to be in between 2 background regions. Could maybe change this. 11.22.24
-# # start = time.time()
- 
-# def voigt_fitting(bef_res_reg, aft_res_reg,xs,ys):
-#     fit_curves = []
-#     parameters = []
-#     for seq in range(0, len(ys)): ## number of sequences, usually 13
-#         ydata = ys[seq][bef_res_reg[1]-bef_res_reg[0]:aft_res_reg[0]-bef_res_reg[0]] 
-#         popt, pcov = curve_fit(voigt2, xs, ydata, bounds = ([0,0,0,-np.inf], [np.inf,np.inf,np.inf, np.inf]))
-#         fitted_curve = voigt2(xs, popt[0],popt[1],popt[2],popt[3],) ## sigma, gamma, xshift (res. center), amp. related thing
-#         fit_curves.append(fitted_curve)
-#         fit_params = popt
-#         fit_errs = np.diagonal(pcov)
-#         parameters.append([fit_params,fit_errs])
-#     return fit_curves, parameters
-
-# res_size = res_reg[1]-res_reg[0] 
-# ON_vfit = np.zeros((len(ON_bgsub),len(ON_bgsub[0]),res_size), dtype = np.float64) ## channels, sequences, range of V_ subtraction
-# OFF_vfit = np.zeros((len(ON_bgsub),len(ON_bgsub[0]),res_size), dtype = np.float64) ## channels, sequences, range of V_ subtraction
-
-# ON_vfit_params = np.zeros((len(ON_bgsub),len(ON_bgsub[0]),2,4), dtype = np.float64) ## channels, sequences,[params, param_errs], [sigma, gamma, shift, amp thing]
-# OFF_vfit_params = np.zeros((len(ON_bgsub),len(ON_bgsub[0]),2,4), dtype = np.float64)
-
-# for i in range(0, len(ON_sums)-1): 
-#     if chan_enab[i] == 24:
-#         emessage = ('bg_ fit does not work for 6Li yet')
-#         logger.error('run '+run_num + emessage)
-#         raise Exception(emessage)
-#     try:
-#         ON_vfit[i], ON_vfit_params[i]  = voigt_fitting(bg_reg1,bg_reg2,xdata, ON_bgsub[i])
-#         OFF_vfit[i], OFF_vfit_params[i] = voigt_fitting(bg_reg1,bg_reg2,xdata, OFF_bgsub[i])
-#     except Exception as e:
-#         logger.error('run '+run_num + ' failed during Voigt fitting')
-#         logger.exception(e)
+for i in range(0, len(ON_sums)-1):
+    if chan_enab[i] == 24:
+        emessage = ('bg_ fit does not work for 6Li yet')
+        logger.error('run '+run_num + emessage)
+        raise Exception(emessage)
+    ON_bgsub[i]  = bg_fitsubtract(bg_reg1,bg_reg2, ON_sums[i])
+    OFF_bgsub[i] = bg_fitsubtract(bg_reg1,bg_reg2, OFF_sums[i])
 
 # end = time.time()
-# print('bg_ fitting time: ' + str(end-start)) 
+# print('bg_ fitting time: ' + str(end-start))  
 
-## In[23]:
+# In[19]:
+# now voigt
+
+def voigt2(x, sig, gam, xshift, amp):
+    fit = voigt_profile(x-xshift, sig, gam)*amp
+    return fit
+
+# In[21]:
+
+# res_region_beg = 5450
+# res_region_end = 6250
+res_region_beg = bg_region1_end  ##currently res region is not selectable... inside of background region
+res_region_end = bg_region2_beg
+res_reg = [res_region_beg,res_region_end]
+if res_reg[0] < bg_reg1[1] or res_reg[1]>bg_reg2[0]:
+    emessage = ('Declared Background region and Resonance region have overlapping fitting regions')
+    logger.error('run '+run_num + emessage)
+    raise Exception(emessage)
+
+xdata = xs_cut[0][res_reg[0]:res_reg[1]]*1e-6  ## just change all xs to ms and one array
+
+# In[22]:
+
+# resonance region is assumed to be in between 2 background regions. Could maybe change this. 11.22.24
+# start = time.time()
+ 
+def voigt_fitting(bef_res_reg, aft_res_reg,xs,ys):
+    fit_curves = []
+    parameters = []
+    for seq in range(0, len(ys)): ## number of sequences, usually 13
+        ydata = ys[seq][bef_res_reg[1]-bef_res_reg[0]:aft_res_reg[0]-bef_res_reg[0]] 
+        popt, pcov = curve_fit(voigt2, xs, ydata, bounds = ([0,0,0,-np.inf], [np.inf,np.inf,np.inf, np.inf]))
+        fitted_curve = voigt2(xs, popt[0],popt[1],popt[2],popt[3],) ## sigma, gamma, xshift (res. center), amp. related thing
+        fit_curves.append(fitted_curve)
+        fit_params = popt
+        fit_errs = np.diagonal(pcov)
+        parameters.append([fit_params,fit_errs])
+    return fit_curves, parameters
+
+res_size = res_reg[1]-res_reg[0] 
+ON_vfit = np.zeros((len(ON_bgsub),len(ON_bgsub[0]),res_size), dtype = np.float64) ## channels, sequences, range of V_ subtraction
+OFF_vfit = np.zeros((len(ON_bgsub),len(ON_bgsub[0]),res_size), dtype = np.float64) ## channels, sequences, range of V_ subtraction
+
+ON_vfit_params = np.zeros((len(ON_bgsub),len(ON_bgsub[0]),2,4), dtype = np.float64) ## channels, sequences,[params, param_errs], [sigma, gamma, shift, amp thing]
+OFF_vfit_params = np.zeros((len(ON_bgsub),len(ON_bgsub[0]),2,4), dtype = np.float64)
+
+for i in range(0, len(ON_sums)-1): 
+    if chan_enab[i] == 24:
+        emessage = ('bg_ fit does not work for 6Li yet')
+        logger.error('run '+run_num + emessage)
+        raise Exception(emessage)
+    try:
+        ON_vfit[i], ON_vfit_params[i]  = voigt_fitting(bg_reg1,bg_reg2,xdata, ON_bgsub[i])
+        OFF_vfit[i], OFF_vfit_params[i] = voigt_fitting(bg_reg1,bg_reg2,xdata, OFF_bgsub[i])
+    except Exception as e:
+        logger.error('run '+run_num + ' failed during Voigt fitting')
+        logger.exception(e)
+
+end = time.time()
+print('bg_ fitting time: ' + str(end-start)) 
+
+# In[23]:
 # sum up all pulses, and then calculate asymmetry using "amplitude"
 
-# start = time.time()
-# all_ONOFF = np.zeros((len(ON_sums),2, len(ON_sums[0][0])), dtype=np.float64) ## all summed ON[0] and OFF[1] pulses for each channel, not each sequence
+start = time.time()
+all_ONOFF = np.zeros((len(ON_sums),2, len(ON_sums[0][0])), dtype=np.float64) ## all summed ON[0] and OFF[1] pulses for each channel, not each sequence
 
-# def all_onoff(ON_arr, OFF_arr):
-#     tempallON = np.zeros((len(ON_arr[0])), dtype=np.float64)
-#     tempallOFF = np.zeros((len(ON_arr[0])), dtype=np.float64)
-#     for seq in range(0, len(ON_arr)): ## number of sequences
-#         tempallON = np.add(ON_arr[seq],tempallON)
-#         tempallOFF = np.add(OFF_arr[seq],tempallOFF)
-#     return tempallON, tempallOFF
+def all_onoff(ON_arr, OFF_arr):
+    tempallON = np.zeros((len(ON_arr[0])), dtype=np.float64)
+    tempallOFF = np.zeros((len(ON_arr[0])), dtype=np.float64)
+    for seq in range(0, len(ON_arr)): ## number of sequences
+        tempallON = np.add(ON_arr[seq],tempallON)
+        tempallOFF = np.add(OFF_arr[seq],tempallOFF)
+    return tempallON, tempallOFF
 
-# for i in range(len(ON_sums)):
-#     all_ONOFF[i][0], all_ONOFF[i][1] = all_onoff(ON_sums[i], OFF_sums[i]) ## channel, ON[0] or OFF[1], summed wave
+for i in range(len(ON_sums)):
+    all_ONOFF[i][0], all_ONOFF[i][1] = all_onoff(ON_sums[i], OFF_sums[i]) ## channel, ON[0] or OFF[1], summed wave
 
-## In[25]:
+# In[25]:
 
-# all_Vfitcurve_ON = np.zeros((len(ON_vfit), len(ON_vfit[0][0])), dtype=np.float64) ## all summed ON or OFF pulses for each channel, not each sequence
-# all_Vfitcurve_OFF = np.zeros((len(ON_vfit), len(ON_vfit[0][0])), dtype=np.float64) ## all summed ON or OFF pulses for each channel, not each sequence
+all_Vfitcurve_ON = np.zeros((len(ON_vfit), len(ON_vfit[0][0])), dtype=np.float64) ## all summed ON or OFF pulses for each channel, not each sequence
+all_Vfitcurve_OFF = np.zeros((len(ON_vfit), len(ON_vfit[0][0])), dtype=np.float64) ## all summed ON or OFF pulses for each channel, not each sequence
 
-# def all_vfits(vfit_arrs):
-#     tempall_vfits = np.zeros((len(vfit_arrs[0])), dtype=np.float64)
-#     for seq in range(0, len(vfit_arrs)): ## number of sequences
-#         tempall_vfits = np.add(vfit_arrs[seq],tempall_vfits)
-#     return tempall_vfits
+def all_vfits(vfit_arrs):
+    tempall_vfits = np.zeros((len(vfit_arrs[0])), dtype=np.float64)
+    for seq in range(0, len(vfit_arrs)): ## number of sequences
+        tempall_vfits = np.add(vfit_arrs[seq],tempall_vfits)
+    return tempall_vfits
 
-# for i in range(len(ON_vfit)):
-#     all_Vfitcurve_ON[i]  = all_vfits(ON_vfit[i]) ## all added vfits for each channel
-#     all_Vfitcurve_OFF[i] = all_vfits(OFF_vfit[i]) 
+for i in range(len(ON_vfit)):
+    all_Vfitcurve_ON[i]  = all_vfits(ON_vfit[i]) ## all added vfits for each channel
+    all_Vfitcurve_OFF[i] = all_vfits(OFF_vfit[i]) 
 
-# # In[26]:
+# In[26]:
 
-# ## add and avg all sigma/gamma/xloc for ON and OFF per channel. Should not be dpendent on spin state.
-# sig_ch = np.zeros((len(ON_vfit),2), dtype=np.float64) ## 1 sigma +/- error for each channel
-# gam_ch = np.zeros((len(ON_vfit),2), dtype=np.float64) ## 1 gamma +/- error for each channel
-# xloc_ch = np.zeros((len(ON_vfit),2), dtype=np.float64) ## 1 xlocation +/- error for each channel
+## add and avg all sigma/gamma/xloc for ON and OFF per channel. Should not be dpendent on spin state.
+sig_ch = np.zeros((len(ON_vfit),2), dtype=np.float64) ## 1 sigma +/- error for each channel
+gam_ch = np.zeros((len(ON_vfit),2), dtype=np.float64) ## 1 gamma +/- error for each channel
+xloc_ch = np.zeros((len(ON_vfit),2), dtype=np.float64) ## 1 xlocation +/- error for each channel
 
-# def sum_param(ON_params_arr, OFF_params_arr, key):  ## key choose between sigma gamma or xloc
-#     if key != 'sigma' and key != 'gamma' and key != 'xloc':
-#         emessage = ('not a valid Voigt fit parameter to sum')
-#         logger.error('run '+run_num + emessage)
-#         raise Exception(emessage)
-#     if key == 'sigma':
-#         param = 0
-#     if key == 'gamma':
-#         param = 1
-#     if key == 'xloc':
-#         param = 2
-#     tempsum = 0
-#     temperr  = []
-#     for seq in range(0, len(ON_params_arr)): ## number of sequences
-#         seqsum = (ON_params_arr[seq][0][param]+OFF_params_arr[seq][0][param])/2  # "normalize" with /2 but not for #sequences
-#         ## [0] above corresponds to the real values of the paramters, as opposed to their errors
-#         ON_err = ON_params_arr[seq][1][param]
-#         OFF_err = OFF_params_arr[seq][1][param]
-#         ## above [1] is used which corresponds to the error in "parameter"
-#         ON_deriv  =  1  ## left over from asym error to keep error prop consistent
-#         OFF_deriv =  1
-#         ## use err prop to get below
-#         seq_err = np.sqrt((ON_deriv**2)*(ON_err**2)+(OFF_deriv**2)*(OFF_err**2))/2
-#         temperr.append(seq_err) ## collect all errors for each sequence
-#         tempsum = np.add(seqsum,tempsum)
-#     ## add error or each sequence in quad.
-#     toterr = np.sqrt(sum([i**2 for i in temperr]))  ## use list comprehension for sum of squares
-#     out = [tempsum,toterr]
-#     return out
+def sum_param(ON_params_arr, OFF_params_arr, key):  ## key choose between sigma gamma or xloc
+    if key != 'sigma' and key != 'gamma' and key != 'xloc':
+        emessage = ('not a valid Voigt fit parameter to sum')
+        logger.error('run '+run_num + emessage)
+        raise Exception(emessage)
+    if key == 'sigma':
+        param = 0
+    if key == 'gamma':
+        param = 1
+    if key == 'xloc':
+        param = 2
+    tempsum = 0
+    temperr  = []
+    for seq in range(0, len(ON_params_arr)): ## number of sequences
+        seqsum = (ON_params_arr[seq][0][param]+OFF_params_arr[seq][0][param])/2  # "normalize" with /2 but not for #sequences
+        ## [0] above corresponds to the real values of the paramters, as opposed to their errors
+        ON_err = ON_params_arr[seq][1][param]
+        OFF_err = OFF_params_arr[seq][1][param]
+        ## above [1] is used which corresponds to the error in "parameter"
+        ON_deriv  =  1  ## left over from asym error to keep error prop consistent
+        OFF_deriv =  1
+        ## use err prop to get below
+        seq_err = np.sqrt((ON_deriv**2)*(ON_err**2)+(OFF_deriv**2)*(OFF_err**2))/2
+        temperr.append(seq_err) ## collect all errors for each sequence
+        tempsum = np.add(seqsum,tempsum)
+    ## add error or each sequence in quad.
+    toterr = np.sqrt(sum([i**2 for i in temperr]))  ## use list comprehension for sum of squares
+    out = [tempsum,toterr]
+    return out
 
-# for i in range(len(ON_vfit)):
-#     sig_ch[i] = sum_param(ON_vfit_params[i], OFF_vfit_params[i], key='sigma')
-#     gam_ch[i] = sum_param(ON_vfit_params[i], OFF_vfit_params[i], key='gamma') 
-#     xloc_ch[i] = sum_param(ON_vfit_params[i], OFF_vfit_params[i], key='xloc') 
+for i in range(len(ON_vfit)):
+    sig_ch[i] = sum_param(ON_vfit_params[i], OFF_vfit_params[i], key='sigma')
+    gam_ch[i] = sum_param(ON_vfit_params[i], OFF_vfit_params[i], key='gamma') 
+    xloc_ch[i] = sum_param(ON_vfit_params[i], OFF_vfit_params[i], key='xloc') 
 
-# # In[27]:
+# In[27]:
 
-# ## new asym using "amplitude" parameter, with error prop
-# asym_ch_err = np.zeros((len(ON_vfit),2), dtype=np.float64) ## 1 Asym for each channel, not for each sequence (can change?)
+## new asym using "amplitude" parameter, with error prop
+asym_ch_err = np.zeros((len(ON_vfit),2), dtype=np.float64) ## 1 Asym for each channel, not for each sequence (can change?)
 
-# def asym3_err(ON_params_arr, OFF_params_arr):
-#     tempasym = 0
-#     temperr  = []
-#     for seq in range(0, len(ON_params_arr)): ## number of sequences
-#         A_plus = ON_params_arr[seq][0][-1] ## just makes things cleaner
-#         A_min  = OFF_params_arr[seq][0][-1]
-#         ## [0] corresponds to the real values of the paramters, as opposed to their errors. [-1] is the "amplitude"
-#         seqasym = ((A_plus-A_min) / (A_plus+A_min))
-#         ON_err = ON_params_arr[seq][1][-1]
-#         OFF_err = OFF_params_arr[seq][1][-1]
-#         ## above [1] is used which corresponds to the error in "amplitude"
-#         ON_deriv  =  2*A_min/ ((A_plus+A_min)**2)
-#         OFF_deriv = -2*A_plus/((A_plus+A_min)**2)
-#         ## use err prop to get below
-#         seq_err = np.sqrt((ON_deriv**2)*(ON_err**2)+(OFF_deriv**2)*(OFF_err**2))
-# #         seq_err = (1/(A_plus+A_min**2))*np.sqrt(4*(A_min**2)(ON_err)**2+4*(A_plus**2)(OFF_err)**2) ## alternate form
-#         temperr.append(seq_err) ## collect all errors for each sequence
-#         tempasym = np.add(seqasym,tempasym)
-# #         print(temperr)
-#     ## add error or each sequence asym in quad.
-#     toterr = np.sqrt(sum([i**2 for i in temperr]))  ## use list comprehension for sum of squares
-#     out = [tempasym,toterr]
-#     return out  ## don't normalize asymON_vfit_params this time...
+def asym3_err(ON_params_arr, OFF_params_arr):
+    tempasym = 0
+    temperr  = []
+    for seq in range(0, len(ON_params_arr)): ## number of sequences
+        A_plus = ON_params_arr[seq][0][-1] ## just makes things cleaner
+        A_min  = OFF_params_arr[seq][0][-1]
+        ## [0] corresponds to the real values of the paramters, as opposed to their errors. [-1] is the "amplitude"
+        seqasym = ((A_plus-A_min) / (A_plus+A_min))
+        ON_err = ON_params_arr[seq][1][-1]
+        OFF_err = OFF_params_arr[seq][1][-1]
+        ## above [1] is used which corresponds to the error in "amplitude"
+        ON_deriv  =  2*A_min/ ((A_plus+A_min)**2)
+        OFF_deriv = -2*A_plus/((A_plus+A_min)**2)
+        ## use err prop to get below
+        seq_err = np.sqrt((ON_deriv**2)*(ON_err**2)+(OFF_deriv**2)*(OFF_err**2))
+#         seq_err = (1/(A_plus+A_min**2))*np.sqrt(4*(A_min**2)(ON_err)**2+4*(A_plus**2)(OFF_err)**2) ## alternate form
+        temperr.append(seq_err) ## collect all errors for each sequence
+        tempasym = np.add(seqasym,tempasym)
+#         print(temperr)
+    ## add error or each sequence asym in quad.
+    toterr = np.sqrt(sum([i**2 for i in temperr]))  ## use list comprehension for sum of squares
+    out = [tempasym,toterr]
+    return out  ## don't normalize asymON_vfit_params this time...
 
-# for i in range(len(ON_vfit)):
-#     asym_ch_err[i] = asym3_err(ON_vfit_params[i], OFF_vfit_params[i]) ## error is really high...
+for i in range(len(ON_vfit)):
+    asym_ch_err[i] = asym3_err(ON_vfit_params[i], OFF_vfit_params[i]) ## error is really high...
     
-# end = time.time()
-# print('calc asym, add pulses/fit params: ' + str(end-start))    
+end = time.time()
+print('calc asym, add pulses/fit params: ' + str(end-start))    
 
 # In[28]:
 
 puck_thresh = 2500
 
 if np.mean(He_Norm_arr[2])==0: ## catches runs with no ch. 29. 0/1 for True/False key
-    puck_in = -1  ## to differentiate from the other 2 true/false states, because these don't have any information, but the puck could have been in
+    puck_in = 0
     puck_in_pulses = ['No ch.29 or no puck information'] ## need to keep track of what runs don't have a ch.29. Puck was in, but with no ch29 to tell.
 else:
+    puck_in = 1
     puck_in_pulses = np.where(He_Norm_arr[2]>=puck_thresh) ## empty array for runs w/out puck
-    if len(puck_in_pulses) == 0: ## puck_in state is false for empty array
-        puck_in = 0
-    else:
-        puck_in = 1 ## if any pulse crosses threshold. Could be that the very last or first pulse has the puck in...
 # print((puck_in_pulses))
 
-# In[29]:
-# save summed pulses to be analyzed for polarization
+# In[29]
+## new version adds vfit curves
+# save all on and off values and asymm + paramters. save out.
 
 ## new version adds vfit curves
 start = time.time()
 
-with h5py.File(polSavename+'.h5', 'w') as hdf5_file:
+with h5py.File(ONOFFSavename+'.h5', 'w') as hdf5_file:
     hdf5_file.create_dataset('xs ', data=xs_cut[0]) ## all xs are the same, even though they are per channel...
     hdf5_file.attrs['puck_state'] = puck_in ## adding the puck information
     hdf5_file.attrs['puck_pulses'] = puck_in_pulses ## will be empty if puck is not in (usually)
     hdf5_file.attrs['num_pulses'] = numRuns ## some runs do not have 5000 pulses! Usually the ones at the end
-    # hdf5_file.attrs['sequences'] = len(sequence[0])
+    hdf5_file.attrs['sequences'] = len(sequence[0])
     for i in range(0,len(ys_cut)):
         Ch_grp = hdf5_file.create_group('ch_'+str(np.char.zfill(str(chan_enab[i]), 2)))
         added_pulses_subgrp = Ch_grp.create_group('added_pulses')
-        # added_vfits_subgrp = Ch_grp.create_group('added_vfits')
-        # added_pulses_subgrp.attrs['rownames'] = ['ON_Row0', 'OFF_Row1']
-        added_pulses_subgrp.create_dataset('ch_'+str(np.char.zfill(str(chan_enab[i]), 2)), data=added_pulses[i])
-        # if chan_enab[i] == 24:
-        #     pass
-        # else:
-        #     added_vfits_subgrp.attrs['resonance_region'] = res_reg
-        #     added_vfits_subgrp.attrs['note'] = 'added all Voigt fits for each ON or OFF state, per ch.'
-        #     added_vfits_subgrp.create_dataset('Vfit_curve_ON',data=all_Vfitcurve_ON[i])
-        #     added_vfits_subgrp.create_dataset('Vfit_curve_OFF',data=all_Vfitcurve_OFF[i])
+        added_vfits_subgrp = Ch_grp.create_group('added_vfits')
+        added_pulses_subgrp.attrs['rownames'] = ['ON_Row0', 'OFF_Row1']
+        added_pulses_subgrp.create_dataset('ch_'+str(np.char.zfill(str(chan_enab[i]), 2)), data=all_ONOFF[i])
+        if chan_enab[i] == 24:
+            pass
+        else:
+            added_vfits_subgrp.attrs['resonance_region'] = res_reg
+            added_vfits_subgrp.attrs['note'] = 'added all Voigt fits for each ON or OFF state, per ch.'
+            added_vfits_subgrp.create_dataset('Vfit_curve_ON',data=all_Vfitcurve_ON[i])
+            added_vfits_subgrp.create_dataset('Vfit_curve_OFF',data=all_Vfitcurve_OFF[i])
         
 # end = time.time()
 # print('saving hdf5: ' + str(end-start))    
@@ -855,29 +825,30 @@ with h5py.File(polSavename+'.h5', 'w') as hdf5_file:
 # In[30]:
 
 # start = time.time()
-# AsymSavename_raw = AsymSavename
-# with h5py.File(AsymSavename+'.h5', 'w') as hdf5_file:
-    # hdf5_file.create_dataset('xs ', data=xs_cut[0]) ## all xs are the same, even though they are per channel...
-    # hdf5_file.attrs['puck_state'] = puck_in ## adding the puck information
-    # hdf5_file.attrs['puck_pulses'] = puck_in_pulses ## will be empty if puck is not in (usually)
-#     hdf5_file.attrs['sequences'] = len(sequence[0])
-#     for i in range(0,len(asym_ch_err)): ## change this to length of asymms!
-#         Ch_grp = hdf5_file.create_group('ch_'+str(np.char.zfill(str(chan_enab[i]), 2)))
-#         Ch_grp.attrs['quick asym'] = asym_ch_err[i]
-#         Ch_grp.attrs['avg_xloc']  = xloc_ch[i]
-#         Ch_grp.attrs['avg_sigma'] = sig_ch[i]
-#         Ch_grp.attrs['avg_gamma'] = gam_ch[i]
-#         ON_subgrp = Ch_grp.create_group('ON')
-#         OFF_subgrp = Ch_grp.create_group('OFF')
-#         ON_subgrp.attrs['for_each_sequence'] = ['parameter (sigma, gamma, x_loc, "amplitude")', 'and its error']
-#         OFF_subgrp.attrs['for_each_sequence'] = ['parameter (sigma, gamma, x_loc, "amplitude")', 'and its error']
-#         ON_subgrp.create_dataset('parameters',data=ON_vfit_params[i])
-#         OFF_subgrp.create_dataset('parameters',data=OFF_vfit_params[i])
-#         ON_subgrp.create_dataset('Vfit_curves',data=ON_vfit[i])
-#         OFF_subgrp.create_dataset('Vfit_curves',data=OFF_vfit[i])
+AsymSavename_raw = AsymSavename
+with h5py.File(AsymSavename+'.h5', 'w') as hdf5_file:
+    hdf5_file.create_dataset('xs ', data=xs_cut[0]) ## all xs are the same, even though they are per channel...
+    hdf5_file.attrs['puck_state'] = puck_in ## adding the puck information
+    hdf5_file.attrs['puck_pulses'] = puck_in_pulses ## will be empty if puck is not in (usually)
+    hdf5_file.attrs['num_pulses'] = numRuns ## some runs do not have 5000 pulses! Usually the ones at the end
+    hdf5_file.attrs['sequences'] = len(sequence[0])
+    for i in range(0,len(asym_ch_err)): ## change this to length of asymms!
+        Ch_grp = hdf5_file.create_group('ch_'+str(np.char.zfill(str(chan_enab[i]), 2)))
+        Ch_grp.attrs['quick asym'] = asym_ch_err[i]
+        Ch_grp.attrs['avg_xloc']  = xloc_ch[i]
+        Ch_grp.attrs['avg_sigma'] = sig_ch[i]
+        Ch_grp.attrs['avg_gamma'] = gam_ch[i]
+        ON_subgrp = Ch_grp.create_group('ON')
+        OFF_subgrp = Ch_grp.create_group('OFF')
+        ON_subgrp.attrs['for_each_sequence'] = ['parameter (sigma, gamma, x_loc, "amplitude")', 'and its error']
+        OFF_subgrp.attrs['for_each_sequence'] = ['parameter (sigma, gamma, x_loc, "amplitude")', 'and its error']
+        ON_subgrp.create_dataset('parameters',data=ON_vfit_params[i])
+        OFF_subgrp.create_dataset('parameters',data=OFF_vfit_params[i])
+        ON_subgrp.create_dataset('Vfit_curves',data=ON_vfit[i])
+        OFF_subgrp.create_dataset('Vfit_curves',data=OFF_vfit[i])
         
 end = time.time()
-# print('saving hdf5: ' + str(end-start))    
+print('saving hdf5: ' + str(end-start))    
 
 # In[31]:
 
