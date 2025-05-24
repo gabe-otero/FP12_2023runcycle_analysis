@@ -39,13 +39,18 @@ uniquefolder = "runs" + str(run_start) + "-" + str(run_end) +"/"
 SFNormFile = 'SF_Norm_files/'+uniquefolder+run_num
 
 # statefileloc = basedir+'\SF_Norm_files\TR_R_expected_avgs_stds_afterclip.csv'
-# processedONOFFfolder = '/processed_data/'+uniquefolder+'ONOFF_U/'
-processedasymfolder = '/processed_data/'+uniquefolder+'asym_U/'
-# processedasymfolder_bg = '/processed_data/'+uniquefolder+'asym_bg_U/'
-# ONOFFSavename = os.getcwd()+processedONOFFfolder+run_num+'_ONOFF_U'
-AsymSavename = os.getcwd()+processedasymfolder+run_num+'_U'
-# AsymSavename_bg = os.getcwd()+processedasymfolder_bg+run_num+'_asym_bg_U' ## maybe canget rid of this
-logger.add(basedir+"/processed_data/" + uniquefolder + '0_ErrorLog_'+run_start+'_'+run_end+'_U.txt', delay = False)
+# processedONOFFfolder = '/processed_data/'+uniquefolder+'ONOFF_D/'
+processedasymfolder = '/processed_data/'+uniquefolder+'asym_D/'
+# processedasymfolder_bg = '/processed_data/'+uniquefolder+'asym_bg_D/'
+# ONOFFSavename = os.getcwd()+processedONOFFfolder+run_num+'_ONOFF_D'
+AsymSavename = os.getcwd()+processedasymfolder+run_num+'_D'
+# AsymSavename_bg = os.getcwd()+processedasymfolder_bg+run_num+'_asym_bg_D' ## maybe canget rid of this
+logger.add(basedir+"/processed_data/" + uniquefolder + '0_ErrorLog_'+run_start+'_'+run_end+'_D.txt', delay = False)
+
+# cannot handle all 24 detectors at once, memory issue... can look into np.empty and deleting variables if needed ##
+# chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]) ## all
+chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,24]) ## downstream _D
+# chan_enab = np.array([12,13,14,15,16,17,18,19,20,21,22,23,24]) ## upstream _U
 
 # if not os.path.exists(os.getcwd()+processedONOFFfolder) or not os.path.exists(os.getcwd()+processedasymfolder) or not os.path.exists(os.getcwd()+processedasymfolder_bg):
 if not os.path.exists(os.getcwd()+processedasymfolder):
@@ -72,13 +77,6 @@ else:
 # AsymSavename = 'F:/LANL/testing_asyms'
 
 ##########################################
-
-# print(os.getcwd())
-
-# cannot handle all 24 detectors at once, memory issue... can look into np.empty and deleting variables if needed ##
-# chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]) ## all
-# chan_enab = np.array([0,1,2,3,4,5,6,7,8,9,10,11,24]) ## downstream _D
-chan_enab = np.array([12,13,14,15,16,17,18,19,20,21,22,23,24]) ## upstream _U
 
 # print(os.getcwd() + folder)
 
@@ -432,17 +430,20 @@ def roll_numba(array, shift):
 # In[9]:
 
 # extend all arrays by a value, check that the max number of offset on 6Li is less than that value ##
+del read_data ## don't believe this is used anymore, make up some memory
 start = time.time()
 
+n_channels, n_pulses, og_length =  ys_basesub.shape[0], ys_basesub.shape[1], ys_basesub.shape[2]
 extendedRange = 3 ## must be a positive value which to extend ys_arr
 if abs(max(offset[-1], key = abs)) > extendedRange: ## if the max offset of 6Li is >extendedRange, something is wrong
     emessage = ('ERROR: largest offset greater than extended range')
     logger.error('run '+run_num + emessage)
     raise Exception(emessage)
+new_length = og_length - 2*extendedRange - 2  ##should be the new length of the array
 
 try:
-    ys_ext = np.zeros((len(ys_basesub), len(ys_basesub[0]), len(ys_basesub[0][0])+extendedRange*2), dtype=np.float64)
-    ys_cut = np.zeros((len(ys_basesub), len(ys_basesub[0]), (len(ys_ext[0][0])-((extendedRange*2)+1)*2)))
+    # ys_ext = np.zeros((len(ys_basesub), len(ys_basesub[0]), len(ys_basesub[0][0])+extendedRange*2), dtype=np.float64)
+    ys_cut = np.zeros((n_channels, n_pulses, new_length))
     xs_cut = np.zeros((len(ys_cut), len(ys_cut[0][0])))
 except Exception as e:
     logger.error('run '+run_num + ' failed during ys_cut array creation')
@@ -479,8 +480,7 @@ except Exception as e:
 # #print('extended range index for checkpulse: '+str(np.argmax(ys_ext[0][checkp]> 2000)))
 # print('cut array index for checkpulse: '+str(np.argmax((ys_cut[0][checkp]*HeNorms[checkp])> 2000)))
 
-del ys_ext ## might help with memory issues
-del ys_basesub
+del ys_basesub  ## might help with mem issues
 
 end = time.time()
 print('aligning and cutting time: ' + str(end-start))            
@@ -695,7 +695,6 @@ v_gammas = []
 v_reslocs = []
 with h5py.File(vparamsfileloc, 'r') as f: ## new arr_sizer
     channels_all = list(f.keys())
-#     channels_all.append(channels_D)
     # print(np.asarray(f.attrs))
     # print(np.asarray(f[channels_all[0]].attrs))
     bg_reg1 = f.attrs.get('bg_reg_bef')
@@ -767,10 +766,6 @@ for i in range(0, len(ON_sums)-1):
 # In[19]:
 # now new voigt, with constants
 
-def voigt2(x, sig, gam, xshift, amp):
-    fit = voigt_profile(x-xshift, sig, gam)*amp
-    return fit
-
 ## define new voigt functions using constants loaded in
 def voigt_c(x, amp): ## takes sig, gamma, res_loc as constants from file
     fit = voigt_profile(x-xloc[0], sig[0], gam[0])*amp ## [0] indicates the mean value of param, not mode or std
@@ -789,6 +784,28 @@ def voigt_fitting_c(bef_res_reg, aft_res_reg,xs,ys):
         fit_params = popt[0]
         fit_errs = np.diagonal(pcov)[0]
         parameters.append([fit_params,fit_errs])  ## only return the amplitude parameter now
+    return fit_curves, parameters
+
+## go back to original voigt fitting but this time with suggested guesses and bounds on possible param
+
+def voigt2(x, s, g, amp):
+    fit = voigt_profile(x-xloc[0], s, g)*amp
+    return fit
+
+def voigt_fitting(bef_res_reg, aft_res_reg,xs,ys):
+    fit_curves = []
+    parameters = []
+    for seq in range(0, len(ys)): ## number of sequences, usually 13
+        ydata = ys[seq][bef_res_reg[1]-bef_res_reg[0]:aft_res_reg[0]-bef_res_reg[0]]
+        a_guess, s_guess, g_guess = np.max(ydata), sig[0], gam[0]
+        s_1std, g_1std = sig[2]/2, gam[2]/2  ## allow for half of the std
+        ## set the guesses as the loaded values, and the bounds on sigma,gamma as +/- 1 std
+        popt, pcov = curve_fit(voigt2, xs, ydata,p0=[s_guess,g_guess,a_guess], bounds = ([s_guess-s_1std,g_guess-g_1std,-np.inf], [s_guess+s_1std,g_guess+g_1std,np.inf]))
+        fitted_curve = voigt2(xs, popt[0],popt[1],popt[2]) ## sigma, gamma, amp. related thing
+        fit_curves.append(fitted_curve)
+        fit_params = popt
+        fit_errs = np.diagonal(pcov)
+        parameters.append([fit_params,fit_errs])
     return fit_curves, parameters
 
 # In[21]:
@@ -813,9 +830,13 @@ xdata = xs_cut[0][res_reg[0]:res_reg[1]]*1e-6  ## just change all xs to ms and o
 
 ON_vfit = np.zeros((len(ON_bgsub),len(ON_bgsub[0]),res_size), dtype = np.float64) ## channels, sequences, range of V_ subtraction
 OFF_vfit = np.zeros((len(ON_bgsub),len(ON_bgsub[0]),res_size), dtype = np.float64) ## channels, sequences, range of V_ subtraction
-
-ON_vfit_params = np.zeros((len(ON_bgsub),len(ON_bgsub[0]),2), dtype = np.float64) ## channels, sequences, [amp thing, amp thing err]
+ON_vfit_params  = np.zeros((len(ON_bgsub),len(ON_bgsub[0]),2), dtype = np.float64) ## channels, sequences, [amp thing, amp thing err]
 OFF_vfit_params = np.zeros((len(ON_bgsub),len(ON_bgsub[0]),2), dtype = np.float64)
+
+sig_ch = np.zeros((len(ON_vfit),2), dtype=np.float64) ## 1 sigma +/- error for each channel
+gam_ch = np.zeros((len(ON_vfit),2), dtype=np.float64) ## 1 gamma +/- error for each channel
+ON_vfit_params_varied  = np.zeros((len(ON_bgsub),len(ON_bgsub[0]),2,3), dtype = np.float64) ## channels, sequences,[params, param_errs], [sigma, gamma, amp thing] NO xSHIFT
+OFF_vfit_params_varied = np.zeros((len(ON_bgsub),len(ON_bgsub[0]),2,3), dtype = np.float64)
 
 for ch in range(0, len(ON_bgsub)):
     sig  = v_sigmas[ch] ## the definitions of these changes per channel for func voigt_c
@@ -828,6 +849,8 @@ for ch in range(0, len(ON_bgsub)):
     try:
         ON_vfit[ch],  ON_vfit_params[ch]  = voigt_fitting_c(bg_reg1,bg_reg2,xdata, ON_bgsub[ch])
         OFF_vfit[ch], OFF_vfit_params[ch] = voigt_fitting_c(bg_reg1,bg_reg2,xdata, OFF_bgsub[ch])
+        trash, ON_vfit_params_varied[ch]  = voigt_fitting(bg_reg1,bg_reg2,xdata, ON_bgsub[ch])  ## these 2 are the original w varying sig,gam
+        trash, OFF_vfit_params_varied[ch] = voigt_fitting(bg_reg1,bg_reg2,xdata, OFF_bgsub[ch])
     except Exception as e:
         logger.error('run '+run_num +' ch '+ str(chan_enab[ch])+' failed during Voigt fitting')
         logger.exception(e)
@@ -911,51 +934,47 @@ for i in range(len(ON_bgsub)):
 #     all_Vfitcurve_ON[i]  = all_vfits(ON_vfit[i]) ## all added vfits for each channel
 #     all_Vfitcurve_OFF[i] = all_vfits(OFF_vfit[i]) 
 
-## add and avg all sigma/gamma/xloc for ON and OFF per channel. Should not be dpendent on spin state.
-# sig_ch = np.zeros((len(ON_vfit),2), dtype=np.float64) ## 1 sigma +/- error for each channel
-# gam_ch = np.zeros((len(ON_vfit),2), dtype=np.float64) ## 1 gamma +/- error for each channel
-# xloc_ch = np.zeros((len(ON_vfit),2), dtype=np.float64) ## 1 xlocation +/- error for each channel
-
-# def sum_param(ON_params_arr, OFF_params_arr, key):  ## key choose between sigma gamma or xloc
-#     if key != 'sigma' and key != 'gamma' and key != 'xloc':
-#         emessage = ('not a valid Voigt fit parameter to sum')
-#         logger.error('run '+run_num + emessage)
-#         raise Exception(emessage)
-#     if key == 'sigma':
-#         param = 0
-#     if key == 'gamma':
-#         param = 1
+## add and avg all sigma/gamma/xloc for ON and OFF per channel. Should not be dpendent on spin state. New as of 05.23.25
+def sum_param(ON_params_arr, OFF_params_arr, key):  ## key choose between sigma gamma NOT xloc
+    if key != 'sigma' and key != 'gamma':
+        emessage = ('not a valid Voigt fit parameter to sum')
+        logger.error('run '+run_num + emessage)
+        raise Exception(emessage)
+    if key == 'sigma':
+        param = 0
+    if key == 'gamma':
+        param = 1
 #     if key == 'xloc':
 #         param = 2
-#     tempsum = 0
-#     temperr  = []
-#     for seq in range(0, len(ON_params_arr)): ## number of sequences
-#         seqsum = (ON_params_arr[seq][0][param]+OFF_params_arr[seq][0][param])/2  # "normalize" with /2 but not for #sequences
-#         ## [0] above corresponds to the real values of the paramters, as opposed to their errors
-#         ON_err = ON_params_arr[seq][1][param]
-#         OFF_err = OFF_params_arr[seq][1][param]
-#         ## above [1] is used which corresponds to the error in "parameter"
-#         ON_deriv  =  1  ## left over from asym error to keep error prop consistent
-#         OFF_deriv =  1
-#         ## use err prop to get below
-#         seq_err = np.sqrt((ON_deriv**2)*(ON_err**2)+(OFF_deriv**2)*(OFF_err**2))/2
-#         temperr.append(seq_err) ## collect all errors for each sequence
-#         tempsum = np.add(seqsum,tempsum)
-#     ## add error or each sequence in quad.
-#     toterr = np.sqrt(sum([i**2 for i in temperr]))  ## use list comprehension for sum of squares
-#     out = [tempsum,toterr]
-#     return out
+    tempsum = 0
+    temperr  = []
+    for seq in range(0, len(ON_params_arr)): ## number of sequences
+        seqsum = (ON_params_arr[seq][0][param]+OFF_params_arr[seq][0][param])/2  # "normalize" with /2 but not for #sequences
+        ## [0] above corresponds to the real values of the paramters, as opposed to their errors
+        ON_err = ON_params_arr[seq][1][param]
+        OFF_err = OFF_params_arr[seq][1][param]
+        ## above [1] is used which corresponds to the error in "parameter"
+        ON_deriv  =  1  ## left over from asym error to keep error prop consistent
+        OFF_deriv =  1
+        ## use err prop to get below
+        seq_err = np.sqrt((ON_deriv**2)*(ON_err**2)+(OFF_deriv**2)*(OFF_err**2))/2
+        temperr.append(seq_err) ## collect all errors for each sequence
+        tempsum = np.add(seqsum,tempsum)
+    ## add error or each sequence in quad.
+    toterr = np.sqrt(sum([i**2 for i in temperr]))  ## use list comprehension for sum of squares
+    out = [tempsum,toterr]
+    return out
 
-# for i in range(len(ON_vfit)):
-#     sig_ch[i] = sum_param(ON_vfit_params[i], OFF_vfit_params[i], key='sigma')
-#     gam_ch[i] = sum_param(ON_vfit_params[i], OFF_vfit_params[i], key='gamma') 
-#     xloc_ch[i] = sum_param(ON_vfit_params[i], OFF_vfit_params[i], key='xloc') 
+for i in range(len(ON_vfit)):
+    sig_ch[i] = sum_param(ON_vfit_params_varied[i], OFF_vfit_params_varied[i], key='sigma')
+    gam_ch[i] = sum_param(ON_vfit_params_varied[i], OFF_vfit_params_varied[i], key='gamma') 
 
 # In[27]:
 
 # new asym using "amplitude" parameter, with error prop
 
 asym_ch_err = np.zeros((len(ON_vfit),2), dtype=np.float64) ## 1 Asym for each channel, and its error
+asym_ch_err_varied = np.zeros((len(ON_vfit),2), dtype=np.float64) ## 1 Asym for each channel, and its error
 
 def asym3_err2(ON_params_arr, OFF_params_arr):
     tempasym = 0
@@ -983,6 +1002,8 @@ def asym3_err2(ON_params_arr, OFF_params_arr):
 
 for i in range(len(ON_vfit)):
     asym_ch_err[i] = asym3_err2(ON_vfit_params[i], OFF_vfit_params[i]) ## error is really high...
+    asym_ch_err_varied[i] = asym3_err2(ON_vfit_params_varied[i,:,:,2], OFF_vfit_params_varied[i,:,:,2]) ## 2 here is amplitude [ch, all sequences, parameter & error, amplitude]
+
     
 end = time.time()
 print('calc asyms: ' + str(end-start)) 
@@ -1041,15 +1062,18 @@ with h5py.File(AsymSavename+'.h5', 'w') as hdf5_file:
     hdf5_file.attrs['sequences'] = len(sequence[0])
     for i in range(0,len(asym_ch_err)): ## change this to length of asymms!
         Ch_grp = hdf5_file.create_group('ch_'+str(np.char.zfill(str(chan_enab[i]), 2)))
-        Ch_grp.attrs['asym_amp'] = asym_ch_err[i]
+        Ch_grp.attrs['asym_amp_constant'] = asym_ch_err[i]
+        Ch_grp.attrs['asym_amp_varied'] = asym_ch_err_varied[i]  ## the asymmetry from the amp w varied sig,gam instead of the constant sig,gam
         Ch_grp.attrs['asym_integral'] = asym_int[i]
         Ch_grp.attrs['used_xloc']  = v_reslocs[i]
         Ch_grp.attrs['used_sigma'] = v_sigmas[i]
         Ch_grp.attrs['used_gamma'] = v_gammas[i]
+        Ch_grp.attrs['found_sigma'] = sig_ch[i]  ## these are the ones we let vary, averaged over all sequences in a channel
+        Ch_grp.attrs['found_gamma'] = gam_ch[i]
         Ch_grp.create_dataset('asym_raw', data=asym_raw[i]) ## 04.28.25 reintroduced raw asym for plotting etc 
         ON_subgrp = Ch_grp.create_group('ON')
         OFF_subgrp = Ch_grp.create_group('OFF')
-        ON_subgrp.attrs['for_each_sequence'] = ['parameter ("amplitude")', 'and its error']
+        ON_subgrp.attrs['for_each_sequence'] = ['parameter ("amplitude")', 'and its error']  ## have not yet done this for the amplitudes varying s,g
         OFF_subgrp.attrs['for_each_sequence'] = ['parameter ("amplitude")', 'and its error']
         ON_subgrp.create_dataset('parameters',data=ON_vfit_params[i])
         OFF_subgrp.create_dataset('parameters',data=OFF_vfit_params[i])

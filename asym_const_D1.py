@@ -1042,6 +1042,7 @@ with h5py.File(AsymSavename+'.h5', 'w') as hdf5_file:
     for i in range(0,len(asym_ch_err)): ## change this to length of asymms!
         Ch_grp = hdf5_file.create_group('ch_'+str(np.char.zfill(str(chan_enab[i]), 2)))
         Ch_grp.attrs['asym_amp'] = asym_ch_err[i]
+        Ch_grp.attrs['asym_integral'] = asym_int[i]
         Ch_grp.attrs['used_xloc']  = v_reslocs[i]
         Ch_grp.attrs['used_sigma'] = v_sigmas[i]
         Ch_grp.attrs['used_gamma'] = v_gammas[i]
