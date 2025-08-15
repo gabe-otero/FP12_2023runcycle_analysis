@@ -915,7 +915,7 @@ def asymraw(ON_arr, OFF_arr):
     normedasym = tempasym #/len(ON_arr) ## took out norm. Normalize later by # sequences
     return normedasym
 
-for i in range(len(ON_bgsub)):
+for i in range(len(ON_sums)):
     asym_raw[i] = asymraw(ON_sums[i], OFF_sums[i])
 
 # In[25]:
@@ -1013,11 +1013,14 @@ print('calc asyms: ' + str(end-start))
 puck_thresh = 2500
 
 if np.mean(He_Norm_arr[2])==0: ## catches runs with no ch. 29. 0/1 for True/False key
-    puck_in = 0
+    puck_in = -1  ## to differentiate from the other 2 true/false states, because these don't have any information, but the puck could have been in
     puck_in_pulses = ['No ch.29 or no puck information'] ## need to keep track of what runs don't have a ch.29. Puck was in, but with no ch29 to tell.
 else:
-    puck_in = 1
     puck_in_pulses = np.where(He_Norm_arr[2]>=puck_thresh) ## empty array for runs w/out puck
+    if len(puck_in_pulses) == 0: ## puck_in state is false for empty array
+        puck_in = 0
+    else:
+        puck_in = 1 ## if any pulse crosses threshold. Could be that the very last or first pulse has the puck in...
 # print((puck_in_pulses))
 
 # In[29]
@@ -1060,25 +1063,25 @@ with h5py.File(AsymSavename+'.h5', 'w') as hdf5_file:
     hdf5_file.attrs['puck_pulses'] = puck_in_pulses ## will be empty if puck is not in (usually)
     hdf5_file.attrs['num_pulses'] = numRuns ## some runs do not have 5000 pulses! Usually the ones at the end
     hdf5_file.attrs['sequences'] = len(sequence[0])
-    for i in range(0,len(asym_ch_err)): ## change this to length of asymms!
+    for i in range(0,len(asym_ch_err)): 
         Ch_grp = hdf5_file.create_group('ch_'+str(np.char.zfill(str(chan_enab[i]), 2)))
-        Ch_grp.attrs['asym_amp_constant'] = asym_ch_err[i]
-        Ch_grp.attrs['asym_amp_varied'] = asym_ch_err_varied[i]  ## the asymmetry from the amp w varied sig,gam instead of the constant sig,gam
-        Ch_grp.attrs['asym_integral'] = asym_int[i]
+        Ch_grp.attrs['asym_amp'] = asym_ch_err[i]
+        Ch_grp.attrs['asym_amp_varied'] = asym_ch_err_varied[i]
         Ch_grp.attrs['used_xloc']  = v_reslocs[i]
         Ch_grp.attrs['used_sigma'] = v_sigmas[i]
         Ch_grp.attrs['used_gamma'] = v_gammas[i]
-        Ch_grp.attrs['found_sigma'] = sig_ch[i]  ## these are the ones we let vary, averaged over all sequences in a channel
-        Ch_grp.attrs['found_gamma'] = gam_ch[i]
+        Ch_grp.attrs['FWHM_bins'] = fwhm_bins[i]
         Ch_grp.create_dataset('asym_raw', data=asym_raw[i]) ## 04.28.25 reintroduced raw asym for plotting etc 
         ON_subgrp = Ch_grp.create_group('ON')
         OFF_subgrp = Ch_grp.create_group('OFF')
-        ON_subgrp.attrs['for_each_sequence'] = ['parameter ("amplitude")', 'and its error']  ## have not yet done this for the amplitudes varying s,g
+        ON_subgrp.attrs['for_each_sequence'] = ['parameter ("amplitude")', 'and its error']
         OFF_subgrp.attrs['for_each_sequence'] = ['parameter ("amplitude")', 'and its error']
         ON_subgrp.create_dataset('parameters',data=ON_vfit_params[i])
         OFF_subgrp.create_dataset('parameters',data=OFF_vfit_params[i])
         ON_subgrp.create_dataset('Vfit_curves',data=ON_vfit[i])
         OFF_subgrp.create_dataset('Vfit_curves',data=OFF_vfit[i])
+    Ch_grp = hdf5_file.create_group('ch_'+str(np.char.zfill(str(chan_enab[-1]), 2))) ## this is for 6Li data
+    Ch_grp.create_dataset('asym_raw', data=asym_raw[i]) 
 
 end = time.time()
 # print('saving hdf5: ' + str(end-start))     
