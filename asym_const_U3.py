@@ -200,7 +200,7 @@ if target == 'La':
     vparamsfileloc = basedir+'/processed_data/'+'0_vparams_La.h5'
 elif target == 'Pr':
     vparamsfileloc = basedir+'/processed_data/'+'1_vparams_Pr.h5'
-elif target == 'Tb203':
+elif target == 'Tb2O3':
     vparamsfileloc = basedir+'/processed_data/'+'2_vparams_Tb.h5'
 elif target == 'Ho203':
     vparamsfileloc = basedir+'/processed_data/'+'3_vparams_Ho.h5'
