@@ -1012,23 +1012,27 @@ def asym3_err2(ON_params_arr, OFF_params_arr):
     tempasym = 0
     temperr  = []
     for seq in range(0, len(ON_params_arr)):
-        A_plus = ON_params_arr[seq][0][0]  # ** changed 05.02.26 for >0 constraint and Vfit + constant
-        A_min  = OFF_params_arr[seq][0][0]  # ** changed 05.02.26 for >0 constraint and Vfit + constant
+        A_plus = ON_params_arr[seq][0]  # amplitude
+        A_min  = OFF_params_arr[seq][0]  # amplitude
 
-        seqasym = ((A_plus-A_min) / (A_plus+A_min))
+        denom = A_plus + A_min
+        if denom == 0:
+            continue
 
-        ON_err = ON_params_arr[seq][1][0]  # ** changed
-        OFF_err = OFF_params_arr[seq][1][0]  # ** changed
+        seqasym = ((A_plus-A_min) / denom)
 
-        ON_deriv  =  2*A_min/ ((A_plus+A_min)**2)
-        OFF_deriv = -2*A_plus/((A_plus+A_min)**2)
+        ON_err = ON_params_arr[seq][1]  # amp error
+        OFF_err = OFF_params_arr[seq][1]  # amp error
+
+        ON_deriv  =  2*A_min/ (denom**2)
+        OFF_deriv = -2*A_plus/(denom**2)
 
         seq_err = np.sqrt((ON_deriv**2)*(ON_err**2)+(OFF_deriv**2)*(OFF_err**2))
 
         temperr.append(seq_err)
         tempasym = np.add(seqasym,tempasym)
 
-    toterr = np.sqrt(sum([i**2 for i in temperr]))
+    toterr = np.sqrt(sum([i**2 for i in temperr])) if len(temperr) > 0 else 0.0
     return [tempasym,toterr]
 
 for i in range(len(ON_vfit)):
